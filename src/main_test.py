@@ -7,9 +7,8 @@ import os
 from main import Processor
 
 class TestProcessor(unittest.TestCase):
-    TEST_FOLDER = "test"
-    TEST_SPECIFICATIONS = os.path.join(TEST_FOLDER, "specifications")
-    TEST_REPO = os.path.join(TEST_FOLDER, "repo")
+    TEST_SPECIFICATIONS = "../test/specifications"
+    TEST_REPO = "../test/repo"
 
     def setUp(self):
         """Set up a Processor instance for each test."""

@@ -8,9 +8,19 @@ environment:
   - DOCUMENT_SCHEMA: document schema file-name for context
 
 context:
-  - service: "specifications.architecture.domains[{name: SERVICE_NAME}]"
-  - document: "specifications.dataDefinitions[DOCUMENT_SCHEMA]"
-  - architecture: "specifications.architecture"
+  - key: service
+    type: selector
+    path: specifications.architecture.domains
+    filter:
+      property: name
+      value: SERVICE_NAME
+  - key: document
+    type: property
+    path: specifications.dataDefinitions
+    property: DOCUMENT_SCHEMA
+  - key: architecture
+    type: path
+    path: specifications.architecture
 
 requires:
   - service.data.sources

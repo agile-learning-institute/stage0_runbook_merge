@@ -51,46 +51,51 @@ class Processor:
         for var in self.environment:
             self.environment[var] = os.getenv(var)
 
-    def resolve_directive(self, directive):
-        """Resolve a directive like 'specifications.architecture.domains[{name: SERVICE_NAME}]'."""
-        if "[{" not in directive:
-            return self.context_data["specifications"]
-
-        # Split directive and process key with filter
-        base_path, filter_expr = directive.split("[{")
-        base_keys = base_path.split(".")
-        filter_key, filter_value_template = filter_expr[:-1].split(": ")
-        filter_value = Template(filter_value_template).render(self.environment)
-
-        # Traverse the base path
-        current = self.context_data["specifications"]
-        for key in base_keys:
-            current = current[key]
-
-        # Filter the list for the matching item
-        if isinstance(current, list):
-            for item in current:
-                if item.get(filter_key) == filter_value:
-                    return item
-            raise KeyError(f"Item with {filter_key} = {filter_value} not found in {directive}")
-
-        raise ValueError(f"Directive does not resolve to a list: {directive}")
-
     def add_context(self):
-        """Add context elements to the context_data."""
+        """Add context elements to the context_data based on standardized directives."""
         for context_item in self.context:
             key = context_item["key"]
-            value_template = context_item["value"]
-            if "[{" in value_template:
-                self.context_data[key] = self.resolve_directive(value_template)
+            directive_type = context_item["type"]
+
+            if directive_type == "path":
+                # Simple property path resolution
+                value = self.resolve_path(context_item["path"])
+            
+            elif directive_type == "property":
+                # Named property resolution
+                base = self.resolve_path(context_item["path"])
+                property_name = context_item["property"]
+                value = base[property_name]
+            
+            elif directive_type == "selector":
+                # List selector resolution
+                list_path = context_item["path"]
+                filter_property = context_item["filter"]["property"]
+                filter_value = self.environment[context_item["filter"]["value"]]
+                value = self.resolve_selector(list_path, filter_property, filter_value)
+            
             else:
-                template = Template(value_template)
-                address = template.render(self.environment)
-                keys = address.split(".")
-                value = self.context_data["specifications"]
-                for key_part in keys:
-                    value = value[key_part]
-                self.context_data[key] = value
+                raise ValueError(f"Unknown context directive type: {directive_type}")
+
+            self.context_data[key] = value
+
+    def resolve_path(self, path):
+        """Resolve a simple property path."""
+        keys = path.split(".")
+        value = self.context_data["specifications"]
+        for key in keys:
+            value = value[key]
+        return value
+
+    def resolve_selector(self, list_path, property_name, property_value):
+        """Resolve a list item based on filter criteria."""
+        items = self.resolve_path(list_path)
+        if isinstance(items, list):
+            for item in items:
+                if item.get(property_name) == property_value:
+                    return item
+            raise KeyError(f"Item with {property_name} = {property_value} not found in {list_path}")
+        raise ValueError(f"Path does not resolve to a list: {list_path}")
 
     def verify_exists(self):
         """Ensure all required properties exist in the context data."""
