@@ -1,0 +1,14 @@
+$schema: "https://stage0/schemas/enumerators.schema.yaml"
+$id: "https://{{organization}}/{{product}}/specifications/enumerators.yaml"
+description: Data Enumerations used throughout {{product}}
+type: object
+properties:
+  status:
+    draft: A document that has not passed validation
+    active: A document that is active in the system
+    archived: A document that is no longer active and can be purged after archival
+  roles:
+    Admin: An administrator
+    Manager: A floor Manager managing work
+    Technician: A Technician doing work
+    Customer: The customer ordering work. 

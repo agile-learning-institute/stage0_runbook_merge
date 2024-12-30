@@ -1,0 +1,8 @@
+$schema: "https://agile-learning.institute/stageZero/schemas/schema.schema.yaml"
+$id: "https://org/dds-foo.yaml"
+title: Foo Product
+type: object
+properties:
+  name:
+  status:
+  lastSaved:

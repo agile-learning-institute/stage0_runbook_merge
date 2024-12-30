@@ -1,0 +1,34 @@
+$schema: "https://stage0/schemas/process.schema.yaml"
+$id: "https://stage0/template-ts-mongo-express-api/process.yaml"
+title: Process file for a typescript, mongo-backed, express based restful API
+version: "1.0"
+
+environment:
+  - SERVICE_NAME: specifies a service name for context
+  - DOCUMENT_SCHEMA: document schema file-name for context
+
+context:
+  - service: "specifications.architecture.domains[{name: SERVICE_NAME}]"
+  - document: "specifications.dataDefinitions[DOCUMENT_SCHEMA]"
+  - architecture: "specifications.architecture"
+
+requires:
+  - service.data.sources
+  - service.data.sinks
+  - document.properties
+  - architecture.product
+  - architecture.product-name
+  - architecture.product-description
+  - architecture.organization
+  - architecture.organization-name
+
+templates:
+  - path: "./simple.md"
+    merge: true
+  - path: "./loop-in.ts"
+    merge: true
+  - path: "./source"
+    mergeFor: 
+      items: service.data.sources
+      output: "./{{item.name}}Service.ts"
+

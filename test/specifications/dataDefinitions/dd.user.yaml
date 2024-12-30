@@ -1,0 +1,10 @@
+$schema: "docs/szs.schema.yaml"
+$id: "https://agile-learning.institute/szs.person.yaml"
+title: User Object
+type: object
+properties:
+  name:
+  email:
+  phone:
+  status:
+  lastSaved:

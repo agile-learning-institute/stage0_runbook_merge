@@ -1,0 +1,17 @@
+$schema: "https://stage0/schemas/personas.schema.yaml"
+$id: "https://{{organization}}/{{product}}/specifications/personas.yaml"
+title: Persona's for RBAC and User Stories
+personas:
+  - name: Alan
+    role: Administrator
+    job: Configures the system at runtime
+  - name: Cary
+    role: Customer
+    job: Submits and tracks Work orders
+  - name: Mary
+    role: Manager
+    job: Oversees work order delivery
+  - name: Tommy
+    role: Technician
+    job: Contributes to fulfilling a work order
+

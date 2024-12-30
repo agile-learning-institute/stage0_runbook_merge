@@ -1,0 +1,14 @@
+$schema: "https://stage0/schemas/schema.schema.yaml"
+$id: "https://{{organization}}/{{product}}/specifications/dd.search.yaml"
+title: Search Object
+type: object
+properties:
+  collection_name:
+    description:
+    ddType: 
+  collection_id:
+    description:
+    ddType: 
+  oneof:
+    user: $ref:./dd.user.yaml
+    work-order: $ref:./dd.work-order.yaml

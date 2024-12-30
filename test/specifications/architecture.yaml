@@ -1,0 +1,197 @@
+$schema: "https://stage0/schemas/architecture.schema.yaml"
+$id: "https://{{organization}}/{{product}}/specifications/architecture.yaml"
+product: ProductSlug
+product-name: Long Product name
+product-description: 1 Paragraph length description.
+organization: OrganizationSlug
+organization-name: Legal Name
+environments:
+  - name: DEVOPS
+    description: Shared Infrastructure for system automation
+    tag: DEVOPS
+    backingServices:
+      - name: github
+        configuration:
+      - name: ecr
+        configuration:
+  - name: DEV
+    description: Cloud hosted development environment
+    tag: latest
+    backingServices:
+      - name: mongodb
+        configuration:
+      - name: elasticsearch
+        configuration:
+      - name: eks
+        configuration:
+      - name: kafka
+        configuration:
+      - name: kafka-connect
+        configuration:
+      - name: s3
+        configuration:
+  - name: TEST
+    description: Cloud hosted environment for SQA testing
+    tag: latest
+    backingServices:
+      - name: mongodb
+        configuration:
+      - name: elasticsearch
+        configuration:
+      - name: ecr
+        configuration:
+      - name: ecs
+        configuration:
+      - name: kafka
+        configuration:
+  - name: STAGE
+    description: Pre-Production Environment - Final SQA of Data Migrations and new code
+    tag: latest
+    backingServices:
+      - name: mongodb
+        configuration:
+      - name: elasticsearch
+        configuration:
+      - name: ecr
+        configuration:
+      - name: ecs
+        configuration:
+      - name: kafka
+        configuration:
+  - name: PROD
+    description: Live production environment
+    tag: latest
+    backingServices:
+      - name: mongodb
+        configuration:
+      - name: elasticsearch
+        configuration:
+      - name: ecr
+        configuration:
+      - name: ecs
+        configuration:
+      - name: kafka
+        configuration:
+
+domains:
+  - name: system
+    description: Product System repo
+    template: template-master
+    repo: "{{organization}}/{{product}}"
+  - name: utils
+    description: Utility Repos
+    api:
+      template: template-ts-express-api-utils
+      repo: "{{organization}}/{{product}}-api-utils"
+    ui:
+      template: template-ts-vue-utils
+      repo: "{{organization}}/{{product}}-vue-utils"
+  - name: initialize-mongodb
+    description: Initialize mongo collection schema constraints and load test data
+    data:
+      sources:
+        - name: user
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.user.yaml
+        - name: customer
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.customer.yaml
+        - name: work-order
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.work-order.yaml
+    api:
+      template: template-initialize-mongo
+      repo: "{{organization}}/{{product}}-initialize-mongodb"
+  - name: initialize-elasticsearch
+    description: Initialize elasticsearch index and etl-data from mongodb
+    data:
+      sources:
+        - name: search
+          backingService: elasticsearch
+          schema: $ref:./dataDefinitions/dd.work-order.yaml
+    api:
+      template: template-ts-elastic-load
+      repo: "{{organization}}/{{product}}-initialize-elasticsearch"
+  - name: initialize-kafka-connect
+    description: Configure kafka-connect realtime ETL from Mongo to Search
+    data:
+      sources:
+        - name: user
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.user.yaml
+        - name: customer
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.customer.yaml
+        - name: work-order
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.work-order.yaml
+      sinks:
+        - name: search
+          backingService: elasticsearch
+          schema: $ref:./dataDefinitions/dd.search.yaml
+    api:
+      template: template-kafka-connect
+      repo: "{{organization}}/{{product}}-initialize-kafka-connect"
+  - name: search
+    description: The search dashboard for the system
+    data:
+      sources:
+        - name: search
+          backingService: elasticsearch
+          schema: $ref:./dataDefinitions/dd.search.yaml
+      sinks:
+        - name: user
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.user.yaml
+        - name: customer
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.customer.yaml
+        - name: work-order
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.work-order.yaml
+    api:
+      template: template-ts-express-elasticsearch-api
+      repo: "{{organization}}/{{product}}-search-api"
+      port: SEARCH_API_PORT
+    ui:
+      template: template-ts-vue-spa
+      repo: "{{organization}}/{{product}}-search-ui"
+      port: SEARCH_UI_PORT
+  - name: user
+    description: The people who use the StageZero platform
+    data:
+      sources:
+        - name: user
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.user.yaml
+        - name: organization
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.organization.yaml
+      sinks:
+    api:
+      template: template-ts-express-mongodb-api
+      repo: "{{organization}}/{{product}}-user-api"
+      port: PERSON_API_PORT
+    ui:
+      template: template-ts-vue
+      repo: "{{organization}}/{{product}}-user-ui"
+      port: PERSON_UI_PORT
+  - name: work-order
+    description: A Work Order placed by a Customer
+    data:
+      sources:
+        - name: work-order
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.work-order.yaml
+      sinks:
+        - name: customer
+          backingService: mongodb
+          schema: $ref:./dataDefinitions/dd.customer.yaml
+    api:
+      template: template-ts-express-mongodb-api
+      repo: "{{organization}}/{{product}}-work-order-api"
+      port: WORK_ORDER_API_PORT
+    ui:
+      template: template-ts-vue-spa
+      repo: "{{organization}}/{{product}}-work-order-ui"
+      port: WORK_ORDER_UI_PORT

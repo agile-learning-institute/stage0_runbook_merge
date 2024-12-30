@@ -1,0 +1,13 @@
+$schema: "https://stage0/schemas/dataDictionary.schema.yaml"
+$id: "https://{{organization}}/{{product}}/specifications/dataDictionary.yaml"
+title: "Data Dictionary for {{product}} by {{organization}}"
+primary_document_types:
+  user: 
+    description: A user of {{product}} including employees and customers
+    schema: $ref:./dataDefinitions/dd.user.yaml 
+  work-order:
+    description: A work order to complete some task
+    schema: $ref:./dataDefinitions/dd.work-order.yaml
+  search:
+    description: A polymorphic search index
+    schema: $ref:./dataDefinitions/dd.search.yaml
