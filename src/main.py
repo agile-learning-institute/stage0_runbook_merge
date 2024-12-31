@@ -56,34 +56,25 @@ class Processor:
         
     def add_context(self):
         """Add context elements to the context_data based on standardized directives."""
+        # context data is template processed with environment values
         for context_item in self.context:
             key = context_item["key"]
             directive_type = context_item["type"]
-            logger.info(f"context processing: {key}")
-
-            # Template process the path, property, and filter values
             path = Template(context_item["path"]).render(self.environment)
 
             if directive_type == "path":
                 # Simple property path resolution
-                logger.info(f"path type context: {path}")
                 value = self.resolve_path(path)
             
             elif directive_type == "selector":
                 # List selector resolution
-                logger.info(f"selector type context: {path}")
                 filter_property = Template(context_item["filter"]["property"]).render(self.environment)
-                logger.info(f"filter_property: {filter_property}")
-                
                 filter_value =    Template(context_item["filter"]["value"]).render(self.environment)
-                logger.info(f"filter_value: {filter_value}")
-                
                 value = self.resolve_selector(path, filter_property, filter_value)
             
             else:
                 raise ValueError(f"Unknown context directive type: {directive_type}")
 
-            logger.info(f"context processed: {value}")
             self.context_data[key] = value
         
     def resolve_path(self, path):
@@ -117,26 +108,37 @@ class Processor:
     def process_templates(self):
         """Process templates according to the process.yaml configuration."""
         for template_config in self.templates:
-            template_path = os.path.join(self.repo_folder, template_config["path"])
+            template_path = os.path.normpath(os.path.join(self.repo_folder, template_config["path"]))
             with open(template_path, "r") as file:
                 template = Template(file.read())
+            logger.info(f"Template Loaded {template_path}")
 
             if "merge" in template_config and template_config["merge"]:
+                # Render and overwrite the template in-place
                 output = template.render(self.context_data)
                 with open(template_path, "w") as file:
                     file.write(output)
+                logger.info(f"Merge Rendered {template_path}")
+
             elif "mergeFor" in template_config:
-                items = self.context_data
-                for key in template_config["mergeFor"]["items"].split("."):
-                    items = items[key]
+                # Use resolve_path to get the items for mergeFor processing
+                items = self.resolve_path(template_config["mergeFor"]["items"])
                 for item in items:
                     self.context_data["item"] = item
                     output = template.render(self.context_data)
+                    
+                    # Render the output file name using the item context
                     output_file_name = Template(template_config["mergeFor"]["output"]).render(item)
-                    output_path = os.path.join(self.repo_folder, output_file_name)
+                    output_path = os.path.normpath(os.path.join(self.repo_folder, output_file_name))
+                    logger.info(f"MergeFor Rendered {output_path}")
+
                     with open(output_path, "w") as file:
                         file.write(output)
+
+                # Remove the original template file after processing
                 os.remove(template_path)
+                logger.info(f"Template Removed {template_path}")
+
 def main():
     specifications_folder = os.getenv("SPECIFICATIONS_FOLDER", "/specifications")
     repo_folder = os.getenv("REPO_FOLDER", "/repo")

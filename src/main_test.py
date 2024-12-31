@@ -89,20 +89,13 @@ class TestProcessor(unittest.TestCase):
         self.processor.process_templates()
 
         # Verify that files were opened for writing for the merge templates
-        mock_file.assert_any_call(os.path.join(self.TEST_REPO, "simple.md"), "w")
-        mock_file.assert_any_call(os.path.join(self.TEST_REPO, "loop-in.ts"), "w")
+        mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "simple.md")), "w")
+        mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "loop-in.ts")), "w")
+        mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "userService.ts")), "w")
+        mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "organizationService.ts")), "w")
 
-        # Verify that the mergeFor template produced the expected output files
-        self.assertTrue(
-            any(
-                "Service.ts" in call_args[0][0]
-                for call_args in mock_file.call_args_list
-            ),
-            "Expected mergeFor templates to create output files."
-        )
-
-        # Verify that files were not removed in this test case
-        mock_remove.assert_not_called()
+        # Verify that the source template was removed
+        mock_remove.assert_called_once()
 
 
 if __name__ == "__main__":

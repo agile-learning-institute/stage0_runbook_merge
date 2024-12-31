@@ -39,5 +39,5 @@ templates:
   - path: "./source"
     mergeFor: 
       items: service.data.sources
-      output: "./{{item.name}}Service.ts"
+      output: "./{{name}}Service.ts"
 
