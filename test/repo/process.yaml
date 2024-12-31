@@ -26,17 +26,17 @@ requires:
   - service.data.sinks
   - data-source.description
   - architecture.product
-  - architecture.product-name
-  - architecture.product-description
+  - architecture.productName
+  - architecture.productDescription
   - architecture.organization
-  - architecture.organization-name
+  - architecture.organizationName
 
 templates:
   - path: "./simple.md"
     merge: true
   - path: "./loop-in.ts"
     merge: true
-  - path: "./source"
+  - path: "./source.ts"
     mergeFor: 
       items: service.data.sources
       output: "./{{name}}Service.ts"

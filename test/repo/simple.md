@@ -2,7 +2,7 @@
 
 ## This is the list
   - Product Slug: {{architecture.product}}
-  - Product Name: {{architecture.product-name}}
-  - Product Description: {{architecture.product-description}}
+  - Product Name: {{architecture.productName}}
+  - Product Description: {{architecture.productDescription}}
   - Organization Slug: {{architecture.organization}}
-  - Organization Name: {{architecture.organization-name}}
+  - Organization Name: {{architecture.organizationName}}
