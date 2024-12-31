@@ -24,35 +24,58 @@ class Processor:
         self.load_process()
         self.load_specifications()
 
+    def remove_process_file(self):
+        process_file_path = os.path.join(self.repo_folder, "process.yaml")
+        os.remove(process_file_path)
+        logger.info(f"Process file {process_file_path} removed")
+        
     def load_process(self):
         """Load the process.yaml file from the repository folder."""
         process_file_path = os.path.join(self.repo_folder, "process.yaml")
-        with open(process_file_path, "r") as file:
-            process = yaml.safe_load(file)
+        try:
+            with open(process_file_path, "r") as file:
+                process = yaml.safe_load(file)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Process file not found: {process_file_path}")
+        except IOError as e:
+            raise IOError(f"Error reading Process file {process_file_path}: {e}")
+            
         self.environment = process.get("environment", [])
         self.context = process.get("context", [])
         self.requires = process.get("requires", [])
         self.templates = process.get("templates", [])
+        logger.info(f"Process Loaded for {len(self.templates)} templates")
 
     def load_specifications(self):
         """Recursively load YAML files from the specifications folder."""
+        files_read = 0
         for root, _, files in os.walk(self.specifications_folder):
             for file in files:
                 if file.endswith(".yaml"):
                     file_path = os.path.join(root, file)
                     with open(file_path, "r") as f:
                         data = yaml.safe_load(f)
+                    files_read += 1
                     relative_path = os.path.relpath(file_path, self.specifications_folder)
                     keys = relative_path.replace(".yaml", "").split(os.sep)
                     temp = self.context_data["specifications"]
                     for key in keys[:-1]:
                         temp = temp.setdefault(key, {})
                     temp[keys[-1]] = data
+        logger.info(f"Specifications Loaded from {files_read} documents")
 
     def read_environment(self):
-        """Load environment variables as specified in the process.yaml."""
+        """
+        Load environment variables as specified in the process.yaml.
+        Raise an exception if a required variable is missing.
+        """
         for var_name in self.environment.keys():
-            self.environment[var_name] = os.getenv(var_name)
+            value = os.getenv(var_name)
+            if value is None:
+                raise KeyError(f"Environment variable '{var_name}' is not set.")
+            self.environment[var_name] = value
+
+        logger.info(f"{len(self.environment)} Environment Variables loaded successfully.")        
         
     def add_context(self):
         """Add context elements to the context_data based on standardized directives."""
@@ -76,6 +99,7 @@ class Processor:
                 raise ValueError(f"Unknown context directive type: {directive_type}")
 
             self.context_data[key] = value
+        logger.info(f"{len(self.context)} Data Contexts Established")
         
     def resolve_path(self, path):
         """Resolve a simple property path."""
@@ -104,50 +128,64 @@ class Processor:
                 if key not in value:
                     raise KeyError(f"Required property {prop} is missing.")
                 value = value[key]
+        logger.info(f"Verified {len(self.requires)} required properties exist, go for processing")
 
     def process_templates(self):
         """Process templates according to the process.yaml configuration."""
+        files_written = 0
         for template_config in self.templates:
             template_path = os.path.normpath(os.path.join(self.repo_folder, template_config["path"]))
-            with open(template_path, "r") as file:
-                template = Template(file.read())
-            logger.info(f"Template Loaded {template_path}")
+            logger.info(f"Processing {template_path}")
+            try:
+                with open(template_path, "r") as file:
+                    template = Template(file.read())
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Template file not found: {template_path}")
+            except IOError as e:
+                raise IOError(f"Error reading template file {template_path}: {e}")
 
             if "merge" in template_config and template_config["merge"]:
                 # Render and overwrite the template in-place
                 output = template.render(self.context_data)
                 with open(template_path, "w") as file:
                     file.write(output)
-                logger.info(f"Merge Rendered {template_path}")
+                files_written += 1
 
             elif "mergeFor" in template_config:
                 # Use resolve_path to get the items for mergeFor processing
                 items = self.resolve_path(template_config["mergeFor"]["items"])
                 for item in items:
-                    self.context_data["item"] = item
-                    output = template.render(self.context_data)
-                    
                     # Render the output file name using the item context
                     output_file_name = Template(template_config["mergeFor"]["output"]).render(item)
                     output_path = os.path.normpath(os.path.join(self.repo_folder, output_file_name))
-                    logger.info(f"MergeFor Rendered {output_path}")
+                    logger.info(f"Building {output_file_name}")
 
+                    # Establish item context and render template
+                    self.context_data["item"] = item
+                    output = template.render(self.context_data)
+                    
                     with open(output_path, "w") as file:
                         file.write(output)
+                    files_written += 1
 
                 # Remove the original template file after processing
                 os.remove(template_path)
-                logger.info(f"Template Removed {template_path}")
+        logger.info(f"Completed - Processed {len(self.templates)} templates, wrote {files_written} files")
 
 def main():
     specifications_folder = os.getenv("SPECIFICATIONS_FOLDER", "/specifications")
     repo_folder = os.getenv("REPO_FOLDER", "/repo")
-    processor = Processor(specifications_folder, repo_folder)
-
-    processor.read_environment()
-    processor.add_context()
-    processor.verify_exists()
-    processor.process_templates()
+    logger.info(f"Initialized, Specifications Folder: {specifications_folder}, Repo Folder: {repo_folder}")
+    
+    try:
+        processor = Processor(specifications_folder, repo_folder)
+        processor.read_environment()
+        processor.add_context()
+        processor.verify_exists()
+        processor.process_templates()
+        processor.remove_process_file()
+    except Exception as e:
+        logger.error(f"Error Reported {str(e)}")
 
 if __name__ == "__main__":
     main()
