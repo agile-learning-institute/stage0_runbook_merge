@@ -2,6 +2,9 @@ from jinja2 import Template
 import os
 import yaml
 
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Processor:
     """
@@ -15,7 +18,7 @@ class Processor:
         self.specifications = {}
         self.environment = {}
         self.context = {}
-        self.required = []
+        self.requires = []
         self.templates = []
         self.context_data = {"specifications": {}}
         self.load_process()
@@ -28,7 +31,7 @@ class Processor:
             process = yaml.safe_load(file)
         self.environment = process.get("environment", [])
         self.context = process.get("context", [])
-        self.required = process.get("requires", [])
+        self.requires = process.get("requires", [])
         self.templates = process.get("templates", [])
 
     def load_specifications(self):
@@ -48,41 +51,45 @@ class Processor:
 
     def read_environment(self):
         """Load environment variables as specified in the process.yaml."""
-        for var in self.environment:
-            self.environment[var] = os.getenv(var)
-
+        for var_name in self.environment.keys():
+            self.environment[var_name] = os.getenv(var_name)
+        
     def add_context(self):
         """Add context elements to the context_data based on standardized directives."""
         for context_item in self.context:
             key = context_item["key"]
             directive_type = context_item["type"]
+            logger.info(f"context processing: {key}")
+
+            # Template process the path, property, and filter values
+            path = Template(context_item["path"]).render(self.environment)
 
             if directive_type == "path":
                 # Simple property path resolution
-                value = self.resolve_path(context_item["path"])
-            
-            elif directive_type == "property":
-                # Named property resolution
-                base = self.resolve_path(context_item["path"])
-                property_name = context_item["property"]
-                value = base[property_name]
+                logger.info(f"path type context: {path}")
+                value = self.resolve_path(path)
             
             elif directive_type == "selector":
                 # List selector resolution
-                list_path = context_item["path"]
-                filter_property = context_item["filter"]["property"]
-                filter_value = self.environment[context_item["filter"]["value"]]
-                value = self.resolve_selector(list_path, filter_property, filter_value)
+                logger.info(f"selector type context: {path}")
+                filter_property = Template(context_item["filter"]["property"]).render(self.environment)
+                logger.info(f"filter_property: {filter_property}")
+                
+                filter_value =    Template(context_item["filter"]["value"]).render(self.environment)
+                logger.info(f"filter_value: {filter_value}")
+                
+                value = self.resolve_selector(path, filter_property, filter_value)
             
             else:
                 raise ValueError(f"Unknown context directive type: {directive_type}")
 
+            logger.info(f"context processed: {value}")
             self.context_data[key] = value
-
+        
     def resolve_path(self, path):
         """Resolve a simple property path."""
         keys = path.split(".")
-        value = self.context_data["specifications"]
+        value = self.context_data
         for key in keys:
             value = value[key]
         return value
@@ -99,7 +106,7 @@ class Processor:
 
     def verify_exists(self):
         """Ensure all required properties exist in the context data."""
-        for prop in self.required:
+        for prop in self.requires:
             keys = prop.split(".")
             value = self.context_data
             for key in keys:

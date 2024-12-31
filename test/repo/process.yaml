@@ -4,28 +4,27 @@ title: Process file for a typescript, mongo-backed, express based restful API
 version: "1.0"
 
 environment:
-  - SERVICE_NAME: specifies a service name for context
-  - DOCUMENT_SCHEMA: document schema file-name for context
+  SERVICE_NAME: specifies a service name for context
+  DATA_SOURCE: document schema file-name for context
 
 context:
-  - key: service
-    type: selector
-    path: specifications.architecture.domains
-    filter:
-      property: name
-      value: SERVICE_NAME
-  - key: document
-    type: property
-    path: specifications.dataDefinitions
-    property: DOCUMENT_SCHEMA
   - key: architecture
     type: path
     path: specifications.architecture
+  - key: service
+    type: selector
+    path: architecture.domains
+    filter:
+      property: name
+      value: "{{SERVICE_NAME}}"
+  - key: data-source
+    type: path
+    path: specifications.dataDictionary.primary_document_types.{{DATA_SOURCE}}
 
 requires:
   - service.data.sources
   - service.data.sinks
-  - document.properties
+  - data-source.description
   - architecture.product
   - architecture.product-name
   - architecture.product-description

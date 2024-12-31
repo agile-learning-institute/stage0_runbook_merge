@@ -6,7 +6,7 @@ product-description: 1 Paragraph length description.
 organization: OrganizationSlug
 organization-name: Legal Name
 environments:
-  - name: DEVOPS
+  DEVOPS: 
     description: Shared Infrastructure for system automation
     tag: DEVOPS
     backingServices:
@@ -14,7 +14,7 @@ environments:
         configuration:
       - name: ecr
         configuration:
-  - name: DEV
+  DEV:
     description: Cloud hosted development environment
     tag: latest
     backingServices:
@@ -30,7 +30,7 @@ environments:
         configuration:
       - name: s3
         configuration:
-  - name: TEST
+  TEST: 
     description: Cloud hosted environment for SQA testing
     tag: latest
     backingServices:
@@ -44,7 +44,7 @@ environments:
         configuration:
       - name: kafka
         configuration:
-  - name: STAGE
+  STAGE:
     description: Pre-Production Environment - Final SQA of Data Migrations and new code
     tag: latest
     backingServices:
@@ -58,7 +58,7 @@ environments:
         configuration:
       - name: kafka
         configuration:
-  - name: PROD
+  PROD:
     description: Live production environment
     tag: latest
     backingServices:
@@ -74,7 +74,7 @@ environments:
         configuration:
 
 domains:
-  - name: system
+  - name: system 
     description: Product System repo
     template: template-master
     repo: "{{organization}}/{{product}}"
@@ -112,7 +112,7 @@ domains:
     api:
       template: template-ts-elastic-load
       repo: "{{organization}}/{{product}}-initialize-elasticsearch"
-  - name: initialize-kafka-connect
+  - name: initialize-kafka-connect 
     description: Configure kafka-connect realtime ETL from Mongo to Search
     data:
       sources:
