@@ -5,9 +5,13 @@ primary_document_types:
   user: 
     description: A user of {{product}} including employees and customers
     schema: $ref:./dataDefinitions/dd.user.yaml 
+  organization: 
+    description: A organization of users
+    schema: $ref:./dataDefinitions/dd.organization.yaml 
   work-order:
     description: A work order to complete some task
-    schema: $ref:./dataDefinitions/dd.work-order.yaml
+    ddType: $ref:./dataDefinitions/dd.work-order.yaml
   search:
     description: A polymorphic search index
-    schema: $ref:./dataDefinitions/dd.search.yaml
+    ddType: $ref:./dataDefinitions/dd.search.yaml
+    
