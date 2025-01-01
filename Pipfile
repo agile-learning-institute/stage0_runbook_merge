@@ -7,9 +7,9 @@ name = "pypi"
 clean = "sh -c 'rm -f ./test/repo_temp/*'"
 setup = "sh -c 'pipenv run clean && cp ./test/repo/* ./test/repo_temp'"
 local = "sh -c 'pipenv run setup && SPECIFICATIONS_FOLDER=./test/specifications REPO_FOLDER=./test/repo_temp SERVICE_NAME=user DATA_SOURCE=organization PYTHONPATH=./src python -m main'"
-test = "sh -c 'pipenv run local && diff -qr ./test/repo_expected/ ./test/repo_temp/'"
+test = "sh -c 'diff -qr ./test/repo_expected/ ./test/repo_temp/'"
 build = "docker build --tag ghcr.io/agile-learning-institute/stage0-generator:latest ."
-container = "sh -c 'pipenv run build && pipenv run setup && docker run --rm -v $(pwd)/test/repo_temp:/repo -v $(pwd)/test/specifications:/specifications -e SERVICE_NAME=user -e DATA_SOURCE=organization ghcr.io/agile-learning-institute/stage0-generator:latest'"
+container = "sh -c 'pipenv run setup && docker run --rm -v $(pwd)/test/repo_temp:/repo -v $(pwd)/test/specifications:/specifications -e SERVICE_NAME=user -e DATA_SOURCE=organization ghcr.io/agile-learning-institute/stage0-generator:latest'"
 
 [packages]
 pyyaml = "*"

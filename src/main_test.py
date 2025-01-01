@@ -26,10 +26,11 @@ class TestProcessor(unittest.TestCase):
         self.assertEqual(len(self.processor.environment), 2)
         self.assertIn("SERVICE_NAME", self.processor.environment)
         self.assertIn("DATA_SOURCE", self.processor.environment)
-        self.assertEqual(len(self.processor.context), 3)
+        self.assertEqual(len(self.processor.context), 4)
         self.assertEqual("architecture", self.processor.context[0]["key"])
         self.assertEqual("service", self.processor.context[1]["key"])
         self.assertEqual("data-source", self.processor.context[2]["key"])
+        self.assertEqual("productName", self.processor.context[3]["key"])
         self.assertEqual(len(self.processor.requires), 8)
         self.assertEqual(len(self.processor.templates), 3)
 

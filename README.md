@@ -1,64 +1,96 @@
 # stageZero-repo-processor
 
-# POC Context
+# Stage Zero overview
 Stage0 is a software platform that uses AI and Human Centered Design techniques to collect technology agnostic, parsable design specifications. It then combines those technology agnostic design files with technology specific templates to generate 80% of an MVP in minutes instead of months. 
 
-This utility is a proof of concept for the code generation part of the product. We will be building a containerized utility that runs batch style, exiting after processing is complete. 
+# Repo Processor
+This utility is used to process code templates, merging them with data from specification yaml files. The utility is meant to be integrated into larger orchestration frameworks. The tool uses the Python [jinja templating library](https://jinja.palletsprojects.com/en/stable/) - this is a [great tutorial](https://ttl255.com/jinja2-tutorial-part-1-introduction-and-variable-substitution/) that will have you up to speed on the important parts quickly. 
 
-Key design points
-- Uses the data found in SPECIFICATIONS_FOLDER or /specifications
-- Processes templates found in REPO_FOLDER or /repo
-- Uses a process.yaml configuration file found in /repo to direct processing
-
-## process.yaml
-The process.yaml file describes how to configure the merge environment, and how to process the templates in the repo. To use the utility you run the container with local folders mounted as volumes for /specifications and /repo. Processing may also require environment values as specified in the process.yaml file. The /repo folder will contain the process.yaml file and all templates. 
-
-This is a configuration based approach to creating data context for merge processing and then processing a collection of templates. The context will always contain a specifications property (see below for information on loading specifications). Additional context is configured in the process.yaml file. Note that some templates are processed "in-place" meaning that after the merge the template is overwritten with the processed version. Other templates are used to create multiple output files based on some list in the context before being removed. This tool is designed to be a once-and-done utility - TEMPLATE PROCESSING IS DESTRUCTIVE !
-
-sample process.yaml
+# Processing a Template Repository
+```bash
+docker run --rm /
+    -v ~/my-repository:/repo 
+    -v ~/my-design:/specifications 
+    -e SERVICE_NAME=user 
+    -e DATA_SOURCE=organization 
+    ghcr.io/agile-learning-institute/stage0-generator:latest
 ```
+Use the `-v` option to mount your local data directories:
+- Mount the repository to `/repo`.
+- Mount the design specifications to `/specifications`.
+
+Use the `-e` option to specify environment variables required by your templates.
+
+# Table of Contents
+- [process.yaml](#processyaml) file that drives template processing
+- [Processing Overview](#processing-overview)
+  - [Load Specifications](#loading-specifications)
+  - [Load Environment variables. ](#loading-environment-variables)
+  - [Set Context properties](#setting-context-properties)
+  - [Verify required properties exist]()
+  - [Merge the Templates](#merge-templates)
+- [Contributing](#contributing)
+
+The data used during template processing is loaded from a folder that is mounted to the container at /specifications. The tool itself is agnostic about the folder structure and files in your specifications folder, it will process any valid yaml files with a .yaml extension. 
+
+The templates, and the process.yaml file that drives processing are mounted to the container at /repo. This will likely be the root of your repository after creating a new repo from a template. 
+
+### process.yaml
+The ``process.yaml`` file describes how to configure the merge environment, and how to process the templates in the repo. To use the utility you run the processing container with local folders mounted as volumes for ``/specifications`` and ``/repo``. Processing may also require environment values as specified in the ``process.yaml`` file. The ``/repo`` folder must contain the ``process.yaml`` file and all templates. 
+
+This is a configuration based approach to creating data context for merge processing and then processing a collection of templates. The context will always contain a specifications property (see below for information on loading specifications). Additional context is configured in the process.yaml file. 
+
+```yaml
 $schema: "https://stage0/schemas/process.schema.yaml"
 $id: "https://stage0/template-ts-mongo-express-api/process.yaml"
 title: Process file for a typescript, mongo-backed, express based restful API
 version: "1.0"
 
 environment:
-  - SERVICE_NAME: specifies a service name for context
-  - DOCUMENT_SCHEMA: document schema file-name for context
+  SERVICE_NAME: specifies a service name for context
+  DATA_SOURCE: document schema file-name for context
 
 context:
-  - service: specifications.architecture.domains[{name: SERVICE_NAME}]
-  - document: specifications.dataDefinitions[DOCUMENT_SCHEMA]
-  - architecture: specifications.architecture
+  - key: architecture
+    type: path
+    path: specifications.architecture
+  - key: service
+    type: selector
+    path: architecture.domains
+    filter:
+      property: name
+      value: "{{SERVICE_NAME}}"
+  - key: data-source
+    type: path
+    path: specifications.dataDictionary.primary_document_types.{{DATA_SOURCE}}
+  - key: productName
+    type: path
+    path: specifications.architecture.product-name
 
 requires:
+  - productName
   - service.data.sources
   - service.data.sinks
-  - document.properties
-  - architecture.domain
+  - data-source.description
   - architecture.product
-  - architecture.product-name
-  - architecture.product-description
+  - architecture.productDescription
   - architecture.organization
-  - architecture.organization-name
-  - architecture.organization
+  - architecture.organizationName
 
 templates:
   - path: "./simple.md"
     merge: true
   - path: "./loop-in.ts"
     merge: true
-  - path: "./source"
+  - path: "./source.ts"
     mergeFor: 
       items: service.data.sources
-      output: "./{{item.name}}Service.ts"
+      output: "./{{name}}Service.ts"
+
 ```
 
-# Processing Overview
-We load the process from the process.yaml file and then we load the specifications by reading all yaml files recursively from the  /specifications folder. Then we follow the process.yaml reading data from the environment, setting up context data, validating required data is present, and then processing the templates. 
-
 ## Loading Specifications
-Specifications are loaded into a single object where folders are treated as objects containing attributes of file-names. The yaml extension is left off of the property name. For example, a specifications folder structure of
+Specifications are loaded into a single object that is available for use in your templates at {{specifications}}. Folders are treated as objects containing attributes of file-names. The yaml extension is left off of the property name. For example, a specifications folder structure of
 ```
 /specifications/
 ├── architecture.yaml
@@ -66,32 +98,142 @@ Specifications are loaded into a single object where folders are treated as obje
 ├── enumerators.yaml
 ├── personas.yaml
 ├── dataDefinitions/    
-│   ├── dd.types/
-│   │  ├── word.yaml    
-│   │  ├── sentence.yaml
-│   │  ├── ...
 │   ├── dd.user.yaml
 │   ├── dd.work-order.yaml
 ```
 
-Would result in a context.specifications dictionary and
-- The value specifications.architecture.product 
-  would come from the product property 
-  of the base object in the architecture.yaml file
-  found at the specifications mount point
-- The value specifications.dataDefinitions.dd.user.description 
-  would come from the description property 
-  of the dd.user.yaml file in the 
-  in the dataDefinitions folder
-  found at the specifications mount point
+Would result in a specifications object, and the value ``specifications.dataDefinitions.dd.user.description`` would come from the description property of the dd.user.yaml file in the in the dataDefinitions folder found at the specifications mount point.
 
+# Processing
+Once these configurations are loaded the following steps are followed:
+- [Load Environment variables. ](#loading-environment-variables)
+- [Set Context properties](#setting-context-properties)
+  - [Path Context](#setting-a-simple-path-context)
+  - [Filter Context](#setting-a-filter-context)
+- [Verify required properties exist]()
+- [Merge the Templates](#merge-templates)
+  - [Singe File Merge](#simple-single-template-merge)
+  - [Generating Multiple Output files](#generating-multiple-output-files)
 
-# Future Enhancements
-These are anticipated enhancements, issues to come
+After processing is complete, the process.yaml file is removed. 
 
-Schema Rendering: Functions that render ddSchema as json-schema or mongo-schema are needed. This should be implemented with reuse in mind as it is likely to support a new schema management tool. 
+## Loading Environment Variables
+When you setup a template repo, you will undoubtedly need some contextual data to perform the merge, this is accomplished by setting an environment variable before processing. The process.yaml file in the template repo will list the required environment variables and what their values should be. 
 
-Implement new schema management tool that leverages the load specifications features, and the render ddSchema as mongo_schema function to process mongo configurations. Revisit versioning logic and config file structure. Enforce migrations on major only, drop/add indexes, drop/add schema validation per version, upsert Versions, upsert Enumerators. LOAD=True will load test data. Safety breaker will only load test data into empty collections.
+## Setting Context properties
+With all of the specifications loaded into context, you will sometimes want to identify specific pieces of data that the templates will expect. This can be done by establishing a context value that "points" to the section of the specifications they should process. There are two ways to set a context value
+- With a reference to a specific property
+- By selecting from a list of objects looking for a match on a specific value. 
 
-Add a RELOAD=True to the schema management tool that causes all data to be deleted and test data to be loaded. Implement safety breaker that prevents reload processing if a key collection has more than a specific number of documents. 
+### Setting a simple path context
+Frequently you will work with a data structure deep in the system, but you would like a "short-hand" name for that value. You Can accomplish this using a path type context.
+```yaml
+  - key: product
+    type: path
+    path: specifications.architecture.meta.product
+```
+Setting this context value allows you to use the simple {{product}} replacement parameter in place of the much longer {{specifications.architecture.meta.product}} key. You can also use template substitution of environment, variables in the path name.
+```yaml
+  - key: data-source
+    type: path
+    path: specifications.dataDictionary.primary_document_types.{{DATA_SOURCE}}
+```
+Setting this context uses the environment variable data_source to establish a context that will be used by your templates. 
+
+### Setting a filter context
+If you need to set a context value that's based on looking up on object within a list than the filter context is what you want to use. 
+```yaml
+  - key: service
+    type: selector
+    path: architecture.domains
+    filter:
+      property: name
+      value: "{{SERVICE_NAME}}"
+```
+This filter context looks for an array of objects at the path, and then searches for the object where the property name has the value specified by the environment, variable service name. 
+
+### A note on replacement keys with -
+Jinja Templates do not support a ``-`` in property names. The templating engine will Will interpret them as a mathematical operation. In general, it's a good idea to avoid using-in your property names, but sometimes you don't have control over the structure of the documents that you'll be working with. In this case, you can use a context to rename a property.
+```
+  - key: productName
+    type: path
+    path: specifications.architecture.product-name
+```
+This context effectively renames the ``product–name`` property to ``productName``
+
+## Verify Required Properties
+All of the properties listed in the processing.yaml file under ``requires`` are checked to make sure they exist. This allows the author of the template to place some quality constraints around the data they expect to be in the specifications.
+
+## Merge Templates
+Now that all of the data is set up, it's time to merge templates. The templates identified are merged with data in two ways.
+
+### Simple single-template merge
+For files that just need to be processed and saved with the output. We have the simple ``merge: true`` command. This will Cause the template listed to be merged in the rendered document will replace the template file. 
+```yaml
+templates:
+  - path: "./simple.md"
+    merge: true
+```
+
+### Generating Multiple Output files
+There may be instances where you want to create multiple files from the same template file typically based on a list of some sort in the data. This is where the merge for operator comes into play.
+```yaml
+  - path: "./source.ts"
+    mergeFor: 
+      items: service.data.sources
+      output: "./{{name}}Service.ts"
+```
+This directive requires that the ``items:`` specified be an iterable List or Dictionary. The template will be merged, and an output file will be generated for each member of the list. The current processing item is exposed in context at the entry ``item``. Values from item are also used to process the output file name, so in the example above each object in the sources List has a name property which is used to create a unique file name for each output file. 
+
+# Contributing
+
+## Prerequisites
+
+Ensure the following tools are installed:
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Python](https://www.python.org/downloads/)
+- [Pipenv](https://pipenv.pypa.io/en/latest/installation.html)
+
+## Testing
+There is not a lot of code, and the unit testing relies on the test data found in the [./test](./test/) folder. The [test/repo](./test/repo/) folder has the test process.yaml file along with a few simple templates. For testing, these files are copied to [test/repo_temp](./test/repo_temp/) where they can be processed. The files in [test/repo_expected](./test/repo_expected/) are what is expected after the merge processing is complete. 
+
+### Install Dependencies
+```bash
+pipenv install
+```
+
+### Clear out the [test/repo_temp](./test/repo_temp/)
+```bash
+pipenv run clean
+```
+
+### Copy [test/repo](./test/repo/) to [test/repo_temp](./test/repo_temp/)
+```bash
+pipenv run setup
+```
+Note: This does clean, then copy
+
+### Run code locally.
+This will use [test/specifications](./test/specifications/) and [test/repo_temp](./test/repo_temp/) accordingly
+```bash
+pipenv run local
+```
+Note: This does clean, copy, then runs the code locally
+
+### Compare output with expected
+```bash
+pipenv run test
+```
+Note: This is a ``df`` and will only report errors, no output is good output
+
+### Build the container
+```bash
+pipenv run build
+```
+
+### Run the container
+```bash
+pipenv run container
+```
+Note: This will setup the [test/repo_temp](./test/repo_temp/) folder and start the container to process it.  
 

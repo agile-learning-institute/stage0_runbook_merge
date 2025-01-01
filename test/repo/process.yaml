@@ -20,13 +20,16 @@ context:
   - key: data-source
     type: path
     path: specifications.dataDictionary.primary_document_types.{{DATA_SOURCE}}
+  - key: productName
+    type: path
+    path: specifications.architecture.product-name
 
 requires:
+  - productName
   - service.data.sources
   - service.data.sinks
   - data-source.description
   - architecture.product
-  - architecture.productName
   - architecture.productDescription
   - architecture.organization
   - architecture.organizationName

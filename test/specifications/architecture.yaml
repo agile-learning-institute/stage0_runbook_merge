@@ -1,7 +1,7 @@
 $schema: "https://stage0/schemas/architecture.schema.yaml"
 $id: "https://{{organization}}/{{product}}/specifications/architecture.yaml"
 product: ProductSlug
-productName: Long Product name
+product-name: Long Product name
 productDescription: 1 Paragraph length description.
 organization: OrganizationSlug
 organizationName: Legal Name
