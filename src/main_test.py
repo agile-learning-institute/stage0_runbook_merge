@@ -7,7 +7,7 @@ import os
 from main import Processor
 
 class TestProcessor(unittest.TestCase):
-    TEST_SPECIFICATIONS = "./test/specifications"
+    TEST_SPECIFICATIONS = "./test/repo/.stage0_template/test_data"
     TEST_REPO = "./test/repo"
 
     def setUp(self):
@@ -80,13 +80,15 @@ class TestProcessor(unittest.TestCase):
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("os.remove")
-    def test_process_templates(self, mock_remove, mock_file):
+    @patch("shutil.rmtree")
+    def test_process_templates(self, mock_rmtree, mock_remove, mock_file):
         """Test template processing with mock file operations."""
+        # Prepare test data
         self.processor.read_environment()
         self.processor.add_context()
         self.processor.verify_exists()
 
-        # Mock writing and removing files
+        # Mock behavior for process_templates
         self.processor.process_templates()
 
         # Verify that files were opened for writing for the merge templates
@@ -95,9 +97,11 @@ class TestProcessor(unittest.TestCase):
         mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "userService.ts")), "w")
         mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "organizationService.ts")), "w")
 
-        # Verify that the source template was removed
-        mock_remove.assert_called_once()
+        # Verify that the source template file was removed
+        mock_remove.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "source.ts")))
 
+        # Ensure that the directory was not removed (if applicable)
+        mock_rmtree.assert_called_once_with(os.path.join(self.TEST_REPO, ".stage0_template"))
 
 if __name__ == "__main__":
     unittest.main()

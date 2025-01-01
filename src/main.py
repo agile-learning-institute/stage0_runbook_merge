@@ -1,3 +1,4 @@
+import shutil
 from jinja2 import Template
 import os
 import yaml
@@ -25,13 +26,15 @@ class Processor:
         self.load_specifications()
 
     def remove_process_file(self):
-        process_file_path = os.path.join(self.repo_folder, "process.yaml")
-        os.remove(process_file_path)
-        logger.info(f"Process file {process_file_path} removed")
+        """Recursively remove the .stage0_template directory."""
+        process_file_path = os.path.join(self.repo_folder, ".stage0_template")
+        logger.info(f"removing {process_file_path}")
+        shutil.rmtree(process_file_path)
+        logger.info(f"stage0_template files {process_file_path} removed")
         
     def load_process(self):
         """Load the process.yaml file from the repository folder."""
-        process_file_path = os.path.join(self.repo_folder, "process.yaml")
+        process_file_path = os.path.join(self.repo_folder, ".stage0_template/process.yaml")
         try:
             with open(process_file_path, "r") as file:
                 process = yaml.safe_load(file)
@@ -170,6 +173,7 @@ class Processor:
 
                 # Remove the original template file after processing
                 os.remove(template_path)
+        self.remove_process_file()
         logger.info(f"Completed - Processed {len(self.templates)} templates, wrote {files_written} files")
 
 def main():
@@ -183,7 +187,6 @@ def main():
         processor.add_context()
         processor.verify_exists()
         processor.process_templates()
-        processor.remove_process_file()
     except Exception as e:
         logger.error(f"Error Reported {str(e)}")
 
