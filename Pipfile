@@ -5,9 +5,9 @@ name = "pypi"
 
 [scripts]
 clean = "sh -c 'rm -rf ~/tmp/testRepo'"
-setup = "sh -c 'pipenv run clean && cp -r ./test/repo/* ~/tmp/testRepo'"
+setup = "sh -c 'pipenv run clean && mkdir -p ~/tmp/testRepo && cd ./test/repo && cp -r . ~/tmp/testRepo'"
 local = "sh -c 'pipenv run setup && SPECIFICATIONS_FOLDER=./test/repo/.stage0_template/test_data REPO_FOLDER=~/tmp/testRepo SERVICE_NAME=user DATA_SOURCE=organization PYTHONPATH=./src python -m main'"
-test = "sh -c 'diff -qr ./test/repo_expected/ ~/tmp/testRepo/'"
+test = "sh -c 'diff -qr ./test/repo/.stage0_template/test_expected ~/tmp/testRepo/'"
 build = "docker build --tag ghcr.io/agile-learning-institute/stage0-generator:latest ."
 container = "sh -c 'cd ./test/repo && ./.stage0_template/test.sh'"
 

@@ -12,19 +12,17 @@ fi
 # Setup the testing folder
 TEMP_REPO=~/tmp/testRepo
 echo "Setting up temporary testing folder at $TEMP_REPO..."
-if [ -d "$TEMP_REPO" ]; then
-    echo "Removing existing temporary folder..."
-    rm -rf "$TEMP_REPO"
-fi
-mkdir -p "$TEMP_REPO"
-cp -r ./* "$TEMP_REPO"
+rm -rf ~/tmp/testRepo
+mkdir -p ~/tmp/testRepo 
+cp -r . ~/tmp/testRepo
 
 # Run the container
 echo "Running the container..."
 docker run --rm \
     -v "$TEMP_REPO:/repo" \
     -v "$(pwd)/.stage0_template/test_data:/specifications" \
-    -e SERVICE_NAME=order \
+    -e SERVICE_NAME=user \
+    -e DATA_SOURCE=organization \
     ghcr.io/agile-learning-institute/stage0-generator:latest
 
 # Check the results

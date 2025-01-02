@@ -37,7 +37,7 @@ The data used during template processing is loaded from a folder that is mounted
 The templates, and the ``.stage0_template/process.yaml`` file that drives processing are mounted to the container at /repo. This will likely be the root of your repository after creating a new repo from a template. 
 
 ### .stage0_template
-This is Folder that contains template specific information. This is where the process.yaml file resides, as well as the template README.md. Most templates will also have testing data, and expected output folders. These work with the ``test.sh`` script which must be run from the repo root (a folder that contains a ``./.stage0_template`` subfolder) and will process the templates with the provided data, and compare the output with a ``diff``. 
+This is the folder that contains template specific information. This is where the process.yaml file resides, as well as the template README.md with information about how to use the template. All templates should also have test_data and test_expected folders with appropriate files. These files work with the [test.sh](./test/repo/.stage0_template/test.sh) script to test the template repo. This script must be run from the repo root (a folder that contains a ``./.stage0_template`` subfolder) and will process the templates with the provided test_data, and compare test_expected with the output generated using ``diff``. 
 
 ### process.yaml
 The ``process.yaml`` file describes how to configure the merge environment, and how to process the templates in the repo. To use the utility you run the processing container with local folders mounted as volumes for ``/specifications`` and ``/repo``. Processing may also require environment values as specified in the ``process.yaml`` file. The ``/repo`` folder must contain the ``process.yaml`` file and all templates. 
@@ -206,19 +206,18 @@ There is not a lot of code, and the unit testing relies on the test data found i
 pipenv install
 ```
 
-### Clear out the [test/repo_temp](./test/repo_temp/)
+### Clear out the [~/tmp/testRepo](~/tmp.testRepo) folder
 ```bash
 pipenv run clean
 ```
 
-### Copy [test/repo](./test/repo/) to [test/repo_temp](./test/repo_temp/)
+### Copy [test/repo](./test/repo/) to [~/tmp/testRepo](~/tmp.testRepo)
 ```bash
 pipenv run setup
 ```
 Note: This does clean, then copy
 
 ### Run code locally.
-This will use [test/specifications](./test/specifications/) and [test/repo_temp](./test/repo_temp/) accordingly
 ```bash
 pipenv run local
 ```
@@ -239,5 +238,5 @@ pipenv run build
 ```bash
 pipenv run container
 ```
-Note: This will setup the [test/repo_temp](./test/repo_temp/) folder and start the container to process it.  
+Note: Will use the utility [test.sh](./.stage0_template/test.sh) script.
 
