@@ -22,6 +22,7 @@ Use the `-v` option to mount your local data directories:
 Use the `-e` option to specify environment variables required by your templates.
 
 # Table of Contents
+- [.stage0_template](#stage0_template) is the folder that identifies this as a template repo
 - [process.yaml](#processyaml) file that drives template processing
 - [Processing Overview](#processing-overview)
   - [Load Specifications](#loading-specifications)
@@ -33,7 +34,10 @@ Use the `-e` option to specify environment variables required by your templates.
 
 The data used during template processing is loaded from a folder that is mounted to the container at /specifications. The tool itself is agnostic about the folder structure and files in your specifications folder, it will process any valid yaml files with a .yaml extension. 
 
-The templates, and the process.yaml file that drives processing are mounted to the container at /repo. This will likely be the root of your repository after creating a new repo from a template. 
+The templates, and the ``.stage0_template/process.yaml`` file that drives processing are mounted to the container at /repo. This will likely be the root of your repository after creating a new repo from a template. 
+
+### .stage0_template
+This is Folder that contains template specific information. This is where the process.yaml file resides, as well as the template README.md. Most templates will also have testing data, and expected output folders. These work with the ``test.sh`` script which must be run from the repo root (a folder that contains a ``./.stage0_template`` subfolder) and will process the templates with the provided data, and compare the output with a ``diff``. 
 
 ### process.yaml
 The ``process.yaml`` file describes how to configure the merge environment, and how to process the templates in the repo. To use the utility you run the processing container with local folders mounted as volumes for ``/specifications`` and ``/repo``. Processing may also require environment values as specified in the ``process.yaml`` file. The ``/repo`` folder must contain the ``process.yaml`` file and all templates. 
