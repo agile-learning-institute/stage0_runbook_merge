@@ -4,7 +4,6 @@ import os
 import yaml
 
 import logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class Processor:
@@ -28,9 +27,8 @@ class Processor:
     def remove_process_file(self):
         """Recursively remove the .stage0_template directory."""
         process_file_path = os.path.join(self.repo_folder, ".stage0_template")
-        logger.info(f"removing {process_file_path}")
+        logger.info(f"Removing {process_file_path}")
         shutil.rmtree(process_file_path)
-        logger.info(f"stage0_template files {process_file_path} removed")
         
     def load_process(self):
         """Load the process.yaml file from the repository folder."""
@@ -146,9 +144,11 @@ class Processor:
                 raise FileNotFoundError(f"Template file not found: {template_path}")
             except IOError as e:
                 raise IOError(f"Error reading template file {template_path}: {e}")
-
+            logger.debug(f"Read Template {template_path}")
+            
             if "merge" in template_config and template_config["merge"]:
                 # Render and overwrite the template in-place
+                logger.debug(f"Merging {template_path}")
                 output = template.render(self.context_data)
                 with open(template_path, "w") as file:
                     file.write(output)
@@ -165,6 +165,7 @@ class Processor:
 
                     # Establish item context and render template
                     self.context_data["item"] = item
+                    logger.debug(f"Merging {output_path}")
                     output = template.render(self.context_data)
                     
                     with open(output_path, "w") as file:
@@ -172,6 +173,7 @@ class Processor:
                     files_written += 1
 
                 # Remove the original template file after processing
+                logger.debug(f"Removing template {template_path}")
                 os.remove(template_path)
         self.remove_process_file()
         logger.info(f"Completed - Processed {len(self.templates)} templates, wrote {files_written} files")
@@ -179,7 +181,9 @@ class Processor:
 def main():
     specifications_folder = os.getenv("SPECIFICATIONS_FOLDER", "/specifications")
     repo_folder = os.getenv("REPO_FOLDER", "/repo")
-    logger.info(f"Initialized, Specifications Folder: {specifications_folder}, Repo Folder: {repo_folder}")
+    logging_level = os.getenv("LOG_LEVEL", "INFO")
+    logging.basicConfig(level=logging_level)
+    logger.info(f"Initialized, Specifications Folder: {specifications_folder}, Repo Folder: {repo_folder}, Logging Level {logging_level}")
     
     try:
         processor = Processor(specifications_folder, repo_folder)
