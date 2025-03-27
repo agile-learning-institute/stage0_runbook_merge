@@ -11,4 +11,4 @@ docker run --rm /
     -v ~/tmp/testRepo:/repo 
     -v ./test_data:/specifications 
     -e SERVICE_NAME=order 
-    ghcr.io/agile-learning-institute/stage0-generator:latest
+    ghcr.io/agile-learning-institute/stage0_runbook_merge:latest
