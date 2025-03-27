@@ -25,7 +25,7 @@ docker run --rm \
     -e LOG_LEVEL=$LOG_LEVEL \
     -e SERVICE_NAME=user \
     -e DATA_SOURCE=organization \
-    ghcr.io/agile-learning-institute/stage0-generator:latest
+    ghcr.io/agile-learning-institute/stage0_runbook_merge:latest
 
 # Check the results
 echo "Checking output..."
