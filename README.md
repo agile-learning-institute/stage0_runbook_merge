@@ -116,7 +116,7 @@ Once these configurations are loaded the following steps are followed:
   - [Filter Context](#setting-a-filter-context)
 - [Verify required properties exist]()
 - [Merge the Templates](#merge-templates)
-  - [Singe File Merge](#simple-single-template-merge)
+  - [Single File Merge](#simple-single-template-merge)
   - [Generating Multiple Output files](#generating-multiple-output-files)
 
 After processing is complete, the process.yaml file is removed. 
