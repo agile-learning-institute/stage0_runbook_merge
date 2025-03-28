@@ -1,7 +1,7 @@
-# stageZero-repo-processor
+# stageZero_runbook_merge
 
 # Stage Zero overview
-Stage0 is a software platform that uses AI and Human Centered Design techniques to collect technology agnostic, parsable design specifications. It then combines those technology agnostic design files with technology specific templates to generate 80% of an MVP in minutes instead of months. 
+Stage0 is a software platform that uses AI and Human Centered Design techniques to collect technology agnostic, parsable design specifications. It then combines those technology agnostic design files with technology specific templates to generate a functional prototype in minutes. 
 
 # Merge Runbook
 This utility is used to process code templates, merging them with data from specification yaml files. The utility is meant to be integrated into larger orchestration frameworks. The tool uses the Python [jinja templating library](https://jinja.palletsprojects.com/en/stable/) - this is a [great tutorial](https://ttl255.com/jinja2-tutorial-part-1-introduction-and-variable-substitution/) that will have you up to speed on the important parts quickly. 
