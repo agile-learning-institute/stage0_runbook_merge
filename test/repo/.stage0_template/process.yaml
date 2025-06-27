@@ -43,4 +43,8 @@ templates:
     mergeFor: 
       items: service.data.sources
       output: "./{{name}}Service.ts"
+  - path: "./dict-test.j2"
+    mergeFrom:
+      items: specifications.dataDictionary.primary_document_types
+      output: "./{{item.name}}Type.txt"
 
