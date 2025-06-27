@@ -1,2 +1,3 @@
 Type: {{item.name}}
-Content: {{item.content}} 
+Content: |
+{% filter indent(2) %}{{item.content | to_yaml}}{% endfilter %} 

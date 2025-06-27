@@ -1,5 +1,5 @@
 import shutil
-from jinja2 import Template
+from jinja2 import Template, Environment
 import os
 import yaml
 import traceback
@@ -140,7 +140,16 @@ class Processor:
             logger.info(f"Processing {template_path}")
             try:
                 with open(template_path, "r") as file:
-                    template = Template(file.read())
+                    env = Environment()
+                    env.filters['to_yaml'] = lambda value: yaml.dump(value, default_flow_style=False).rstrip()
+                    def indent_filter(s, n=2):
+                        if not s:
+                            return ''
+                        lines = s.splitlines()
+                        result = '\n'.join((' ' * n + line if line.strip() else '') for line in lines)
+                        return result
+                    env.filters['indent'] = indent_filter
+                    template = env.from_string(file.read())
             except FileNotFoundError:
                 raise FileNotFoundError(f"Template file not found: {template_path}")
             except IOError as e:
@@ -180,7 +189,7 @@ class Processor:
                     context = {**self.context_data, "item": item}
                     logger.error(f"Template context keys: {list(context.keys())}")
                     logger.error(f"Item in context: {context.get('item')}")
-                    output = template.render({**self.context_data, "item": item})
+                    output = template.render(context)
                     
                     with open(output_path, "w") as file:
                         file.write(output)
@@ -204,6 +213,7 @@ class Processor:
                 
                 for item in iterable:
                     logger.error(f"Processing item: {item}")
+                    logger.error(f"Type of item['content']: {type(item['content'])}, value: {item['content']}")
                     # Render the output file name using the item context
                     output_file_name = Template(template_config["mergeFrom"]["output"]).render(item=item)
                     logger.error(f"Output file name: {output_file_name}")
@@ -215,12 +225,8 @@ class Processor:
                     context = {**self.context_data, "item": item}
                     logger.error(f"Template context keys: {list(context.keys())}")
                     logger.error(f"Item in context: {context.get('item')}")
-                    try:
-                        output = template.render(context)
-                    except Exception as e:
-                        logger.error(f"Exception during template rendering: {e}")
-                        logger.error(traceback.format_exc())
-                        continue
+                    output = template.render(context)
+                    
                     with open(output_path, "w") as file:
                         file.write(output)
                     files_written += 1

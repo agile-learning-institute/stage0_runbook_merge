@@ -1,2 +1,4 @@
 Type: user
-Content: {'description': 'A user of {{product}} including employees and customers', 'schema': '$ref:./dataDefinitions/dd.user.yaml'} 
+Content: |
+  description: A user of {{product}} including employees and customers
+  schema: $ref:./dataDefinitions/dd.user.yaml 

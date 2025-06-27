@@ -1,2 +1,4 @@
 Type: organization
-Content: {'description': 'A organization of users', 'schema': '$ref:./dataDefinitions/dd.organization.yaml'} 
+Content: |
+  description: A organization of users
+  schema: $ref:./dataDefinitions/dd.organization.yaml 

@@ -14,4 +14,18 @@ primary_document_types:
   search:
     description: A polymorphic search index
     ddType: $ref:./dataDefinitions/dd.search.yaml
+
+types:
+  user:
+    description: A user of {{product}} including employees and customers
+    schema: $ref:./dataDefinitions/dd.user.yaml
+  organization:
+    description: A organization of users
+    schema: $ref:./dataDefinitions/dd.organization.yaml
+  work-order:
+    description: A work order to complete some task
+    ddType: $ref:./dataDefinitions/dd.work-order.yaml
+  search:
+    description: A polymorphic search index
+    ddType: $ref:./dataDefinitions/dd.search.yaml
     
