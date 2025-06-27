@@ -1,0 +1,2 @@
+Type: search
+Content: {'description': 'A polymorphic search index', 'ddType': '$ref:./dataDefinitions/dd.search.yaml'} 

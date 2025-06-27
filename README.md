@@ -189,6 +189,39 @@ There may be instances where you want to create multiple files from the same tem
 ```
 This directive requires that the ``items:`` specified be an iterable List or Dictionary. The template will be merged, and an output file will be generated for each member of the list. The current processing item is exposed in context at the entry ``item``. Values from item are also used to process the output file name, so in the example above each object in the sources List has a name property which is used to create a unique file name for each output file. 
 
+#### Dictionary Iteration in mergeFor
+When the `items` path resolves to a dictionary (such as a folder of YAML files), the processor will iterate over its key-value pairs:
+- Each iteration provides an `item` with `name` (the key) and `content` (the value)
+- This allows you to generate a file for each entry in a folder-mapped dictionary, such as custom types
+
+```yaml
+  - path: "./input/dictionary/types/type.yaml.template"
+    mergeFor:
+      items: specifications.dictionaries.types
+      output: "./input/dictionary/types/{{item.name}}.yaml"
+```
+
+In the template, you can access:
+- `{{item.name}}` - the filename (without .yaml extension)
+- `{{item.content}}` - the full content of the YAML file
+
+### Generating Multiple Output files from a Dictionary (mergeFrom)
+
+The `mergeFrom` directive allows you to generate multiple files from a dictionary, such as a folder of YAML files loaded as a dictionary. Each iteration provides an `item` with `name` (the key) and `content` (the value).
+
+Example:
+```yaml
+  - path: "./input/dictionary/types/type.yaml.template"
+    mergeFrom:
+      items: specifications.dictionaries.types
+      output: "./input/dictionary/types/{{item.name}}.yaml"
+```
+In the template, you can access:
+- `{{item.name}}` - the filename (without .yaml extension)
+- `{{item.content}}` - the full content of the YAML file
+
+This is different from `mergeFor`, which is used for iterating over lists. Use `mergeFrom` when your data is a dictionary and you want to generate a file for each key-value pair.
+
 # Contributing
 
 ## Prerequisites

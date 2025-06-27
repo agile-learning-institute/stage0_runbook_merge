@@ -1,0 +1,2 @@
+Type: work-order
+Content: {'description': 'A work order to complete some task', 'ddType': '$ref:./dataDefinitions/dd.work-order.yaml'} 
