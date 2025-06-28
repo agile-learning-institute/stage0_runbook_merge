@@ -45,6 +45,10 @@ templates:
       output: "./{{name}}Service.ts"
   - path: "./dict-test.j2"
     mergeFrom:
-      items: specifications.dataDictionary.primary_document_types
+      items: specifications.dataDictionary.types
       output: "./{{item.name}}Type.txt"
+  - path: "./json-test.j2"
+    mergeFrom:
+      items: specifications.dataDictionary.types
+      output: "./{{item.name}}JsonTest.md"
 

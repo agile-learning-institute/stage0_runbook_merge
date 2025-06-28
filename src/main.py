@@ -1,7 +1,8 @@
 import shutil
-from jinja2 import Template
+from jinja2 import Template, Environment
 import os
 import yaml
+import json
 import traceback
 
 import logging
@@ -140,7 +141,18 @@ class Processor:
             logger.info(f"Processing {template_path}")
             try:
                 with open(template_path, "r") as file:
-                    template = Template(file.read())
+                    env = Environment()
+                    env.filters['to_yaml'] = lambda value: yaml.dump(value, default_flow_style=False).rstrip()
+                    env.filters['to_json'] = lambda value: json.dumps(value, indent=2, sort_keys=True)
+                    env.filters['to_json_minified'] = lambda value: json.dumps(value, separators=(',', ':'))
+                    def indent_filter(s, n=2):
+                        if not s:
+                            return ''
+                        lines = s.splitlines()
+                        result = '\n'.join((' ' * n + line if line.strip() else '') for line in lines)
+                        return result
+                    env.filters['indent'] = indent_filter
+                    template = env.from_string(file.read())
             except FileNotFoundError:
                 raise FileNotFoundError(f"Template file not found: {template_path}")
             except IOError as e:
@@ -158,7 +170,6 @@ class Processor:
             elif "mergeFor" in template_config:
                 # Use resolve_path to get the items for mergeFor processing
                 items = self.resolve_path(template_config["mergeFor"]["items"])
-                logger.error(f"mergeFor items type: {type(items)}, value: {items}")
                 # Handle both list and dictionary iteration
                 if isinstance(items, dict):
                     # For dictionaries, create name/content pairs
@@ -166,21 +177,15 @@ class Processor:
                 else:
                     # For lists, use as-is
                     iterable = items
-                logger.error(f"mergeFor iterable: {iterable}")
                 for item in iterable:
-                    logger.error(f"Processing item: {item}")
                     # Render the output file name using the item context
                     output_file_name = Template(template_config["mergeFor"]["output"]).render(item)
-                    logger.error(f"Output file name: {output_file_name}")
                     output_path = os.path.normpath(os.path.join(self.repo_folder, output_file_name))
                     logger.info(f"Building {output_file_name}")
 
                     # Establish item context and render template
-                    logger.debug(f"Merging {output_path}")
                     context = {**self.context_data, "item": item}
-                    logger.error(f"Template context keys: {list(context.keys())}")
-                    logger.error(f"Item in context: {context.get('item')}")
-                    output = template.render({**self.context_data, "item": item})
+                    output = template.render(context)
                     
                     with open(output_path, "w") as file:
                         file.write(output)
@@ -193,34 +198,23 @@ class Processor:
             elif "mergeFrom" in template_config:
                 # New directive for dictionary iteration
                 items = self.resolve_path(template_config["mergeFrom"]["items"])
-                logger.error(f"mergeFrom items type: {type(items)}, value: {items}")
                 
                 if not isinstance(items, dict):
                     raise ValueError(f"mergeFrom requires a dictionary, got {type(items)}")
                 
                 # Convert dictionary to name/content pairs
                 iterable = [{"name": k, "content": v} for k, v in items.items()]
-                logger.error(f"mergeFrom iterable: {iterable}")
                 
                 for item in iterable:
-                    logger.error(f"Processing item: {item}")
                     # Render the output file name using the item context
                     output_file_name = Template(template_config["mergeFrom"]["output"]).render(item=item)
-                    logger.error(f"Output file name: {output_file_name}")
                     output_path = os.path.normpath(os.path.join(self.repo_folder, output_file_name))
                     logger.info(f"Building {output_file_name}")
 
                     # Establish item context and render template
-                    logger.debug(f"Merging {output_path}")
                     context = {**self.context_data, "item": item}
-                    logger.error(f"Template context keys: {list(context.keys())}")
-                    logger.error(f"Item in context: {context.get('item')}")
-                    try:
-                        output = template.render(context)
-                    except Exception as e:
-                        logger.error(f"Exception during template rendering: {e}")
-                        logger.error(traceback.format_exc())
-                        continue
+                    output = template.render(context)
+                    
                     with open(output_path, "w") as file:
                         file.write(output)
                     files_written += 1
