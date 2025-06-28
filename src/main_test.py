@@ -32,7 +32,7 @@ class TestProcessor(unittest.TestCase):
         self.assertEqual("data-source", self.processor.context[2]["key"])
         self.assertEqual("productName", self.processor.context[3]["key"])
         self.assertEqual(len(self.processor.requires), 8)
-        self.assertEqual(len(self.processor.templates), 4)  # Updated to include the new dict-test.j2 template
+        self.assertEqual(len(self.processor.templates), 5)  # Updated to include the new json-test.j2 template
 
     def test_load_specifications(self):
         """Test that specifications are loaded correctly."""
