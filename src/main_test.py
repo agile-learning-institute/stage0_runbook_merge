@@ -123,6 +123,36 @@ class TestProcessor(unittest.TestCase):
         expected = "key: value\nnested:\n  inner: data"
         self.assertEqual(result, expected)
 
+    def test_to_json_filter(self):
+        """Test that the to_json filter works correctly."""
+        from jinja2 import Environment
+        import json
+        
+        env = Environment()
+        env.filters['to_json'] = lambda value: json.dumps(value, indent=2, sort_keys=True)
+        
+        template = env.from_string("{{ data | to_json }}")
+        test_data = {"key": "value", "nested": {"inner": "data"}}
+        result = template.render(data=test_data)
+        
+        expected = '{\n  "key": "value",\n  "nested": {\n    "inner": "data"\n  }\n}'
+        self.assertEqual(result, expected)
+
+    def test_to_json_minified_filter(self):
+        """Test that the to_json_minified filter works correctly."""
+        from jinja2 import Environment
+        import json
+        
+        env = Environment()
+        env.filters['to_json_minified'] = lambda value: json.dumps(value, separators=(',', ':'))
+        
+        template = env.from_string("{{ data | to_json_minified }}")
+        test_data = {"key": "value", "nested": {"inner": "data"}}
+        result = template.render(data=test_data)
+        
+        expected = '{"key":"value","nested":{"inner":"data"}}'
+        self.assertEqual(result, expected)
+
     def test_indent_filter(self):
         """Test that the indent filter works correctly."""
         from jinja2 import Environment
@@ -195,6 +225,28 @@ class TestProcessor(unittest.TestCase):
         result = template.render(data=test_data)
         
         expected = "Content: |\n  key: value\n  nested:\n    inner: data"
+        self.assertEqual(result, expected)
+
+    def test_combined_json_filters(self):
+        """Test that to_json and indent filters work together."""
+        from jinja2 import Environment
+        import json
+        
+        env = Environment()
+        env.filters['to_json'] = lambda value: json.dumps(value, indent=2, sort_keys=True)
+        def indent_filter(s, n=2):
+            if not s:
+                return ''
+            lines = s.splitlines()
+            result = '\n'.join((' ' * n + line if line.strip() else '') for line in lines)
+            return result
+        env.filters['indent'] = indent_filter
+        
+        template = env.from_string("Content: |\n{% filter indent(2) %}{{ data | to_json }}{% endfilter %}")
+        test_data = {"key": "value", "nested": {"inner": "data"}}
+        result = template.render(data=test_data)
+        
+        expected = 'Content: |\n  {\n    "key": "value",\n    "nested": {\n      "inner": "data"\n    }\n  }'
         self.assertEqual(result, expected)
 
 if __name__ == "__main__":

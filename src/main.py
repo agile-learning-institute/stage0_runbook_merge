@@ -2,6 +2,7 @@ import shutil
 from jinja2 import Template, Environment
 import os
 import yaml
+import json
 import traceback
 
 import logging
@@ -142,6 +143,8 @@ class Processor:
                 with open(template_path, "r") as file:
                     env = Environment()
                     env.filters['to_yaml'] = lambda value: yaml.dump(value, default_flow_style=False).rstrip()
+                    env.filters['to_json'] = lambda value: json.dumps(value, indent=2, sort_keys=True)
+                    env.filters['to_json_minified'] = lambda value: json.dumps(value, separators=(',', ':'))
                     def indent_filter(s, n=2):
                         if not s:
                             return ''
