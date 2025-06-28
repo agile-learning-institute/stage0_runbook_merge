@@ -6,20 +6,24 @@ Stage0 is a software platform that uses AI and Human Centered Design techniques 
 # Merge Runbook
 This utility is used to process code templates, merging them with data from specification yaml files. The utility is meant to be integrated into larger orchestration frameworks. The tool uses the Python [jinja templating library](https://jinja.palletsprojects.com/en/stable/) - this is a [great tutorial](https://ttl255.com/jinja2-tutorial-part-1-introduction-and-variable-substitution/) that will have you up to speed on the important parts quickly. 
 
-# Processing a Template Repository
+## Developer Commands
 ```bash
-docker run --rm /
-    -v ~/my-repository:/repo 
-    -v ~/my-design:/specifications 
-    -e SERVICE_NAME=user 
-    -e DATA_SOURCE=organization 
-    ghcr.io/agile-learning-institute/stage0_runbook_merge:latest
-```
-Use the `-v` option to mount your local data directories:
-- Mount the repository to `/repo`.
-- Mount the design specifications to `/specifications`.
+# Install dependencies
+pipenv install
 
-Use the `-e` option to specify environment variables required by your templates.
+# Run unit testing
+pipenv run test
+
+# Run local code for test/repo
+pipenv run local
+
+# Build and use the container to merge test/repo
+pipenv run merge
+
+# Just Build the Container
+pipenv run build
+
+```
 
 # Table of Contents
 - [.stage0_template](#stage0_template) is the folder that identifies this as a template repo
