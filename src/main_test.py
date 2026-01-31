@@ -34,7 +34,7 @@ class TestProcessor(unittest.TestCase):
         self.assertEqual("data-source", self.processor.context[2]["key"])
         self.assertEqual("productName", self.processor.context[3]["key"])
         self.assertEqual(len(self.processor.requires), 8)
-        self.assertEqual(len(self.processor.templates), 5)  # Updated to include the new json-test.j2 template
+        self.assertEqual(len(self.processor.templates), 6)
 
 
     def test_load_specifications(self):
@@ -130,11 +130,13 @@ templates:
         # Verify that files were opened for writing for the merge templates
         mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "simple.md")), "w")
         mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "loop-in.ts")), "w")
+        mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "README.md")), "w")
         mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "userService.ts")), "w")
         mock_file.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "organizationService.ts")), "w")
 
         # Verify that the source template file was removed
         mock_remove.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "source.ts")))
+        mock_remove.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "README.md.template")))
         # Verify that the dict-test template file was removed
         mock_remove.assert_any_call(os.path.normpath(os.path.join(self.TEST_REPO, "dict-test.j2")))
 

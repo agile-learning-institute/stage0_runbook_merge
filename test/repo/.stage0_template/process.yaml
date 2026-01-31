@@ -39,6 +39,9 @@ templates:
     merge: true
   - path: "./loop-in.ts"
     merge: true
+  - path: "./README.md.template"
+    merge: true
+    output: "./README.md"
   - path: "./source.ts"
     mergeFor: 
       items: service.data.sources

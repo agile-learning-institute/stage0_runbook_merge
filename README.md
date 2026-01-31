@@ -57,6 +57,14 @@ templates:
     merge: true
 ```
 
+### Merge to Different Output
+```yaml
+templates:
+  - path: "./README.md.template"
+    merge: true
+    output: "./README.md"
+```
+
 ### Multiple File Generation
 ```yaml
 # process.yaml

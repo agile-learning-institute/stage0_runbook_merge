@@ -107,12 +107,21 @@ All properties listed under `requires` in the `process.yaml` file are checked to
 Templates are merged with data in several ways:
 
 #### Simple Single-Template Merge
-For files that need to be processed and saved with output, use `merge: true`:
+For files that need to be processed and saved, use `merge: true`:
 
 ```yaml
 templates:
   - path: "./simple.md"
     merge: true
+```
+
+By default, the template is overwritten in-place. To write to a different file and remove the template, add an optional `output` property (supports Jinja2 for context and environment variables):
+
+```yaml
+templates:
+  - path: "./README.md.template"
+    merge: true
+    output: "./README.md"
 ```
 
 #### Generating Multiple Output Files (mergeFor)
