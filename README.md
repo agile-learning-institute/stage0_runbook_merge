@@ -105,6 +105,8 @@ docker run --rm \
 ### Environment Variables
 Use the `-e` option to specify environment variables required by your templates.
 
+- `LOG_LEVEL` - Set to `DEBUG` for verbose output (process config, context resolution, template operations). Default: `INFO`.
+
 ## Getting Help
 
 - **Creating templates?** See the [Template Creation Guide](TEMPLATE_GUIDE.md)
