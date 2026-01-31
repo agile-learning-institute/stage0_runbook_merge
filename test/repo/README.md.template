@@ -1,0 +1,7 @@
+# {{ productName }}
+
+{{ architecture.productDescription }}
+
+## Service: {{ service.name }}
+
+This API is backed by {{ service.data.sources[0].backingService }}.

@@ -161,11 +161,22 @@ class Processor:
             logger.debug(f"Read Template {template_path}")
             
             if "merge" in template_config and template_config["merge"]:
-                # Render and overwrite the template in-place
                 logger.debug(f"Merging {template_path}")
                 output = template.render(self.context_data)
-                with open(template_path, "w") as file:
-                    file.write(output)
+                if "output" in template_config:
+                    # Write to output path and delete the template file
+                    output_context = {**self.context_data, **self.environment}
+                    output_file_name = Template(template_config["output"]).render(output_context)
+                    output_path = os.path.normpath(os.path.join(self.repo_folder, output_file_name))
+                    logger.info(f"Building {output_file_name}")
+                    with open(output_path, "w") as file:
+                        file.write(output)
+                    logger.debug(f"Removing template {template_path}")
+                    os.remove(template_path)
+                else:
+                    # Render and overwrite the template in-place
+                    with open(template_path, "w") as file:
+                        file.write(output)
                 files_written += 1
 
             elif "mergeFor" in template_config:
