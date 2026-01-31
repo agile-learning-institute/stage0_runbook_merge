@@ -1,5 +1,6 @@
 import shutil
-from jinja2 import Template, Environment
+import sys
+from jinja2 import Template, Environment, UndefinedError, TemplateSyntaxError
 import os
 import yaml
 import json
@@ -7,6 +8,15 @@ import traceback
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+def _format_yaml_error(e, file_path):
+    """Format YAML parsing errors with file path and line/column when available."""
+    msg = f"YAML parsing error in {file_path}: {e}"
+    if hasattr(e, "problem_mark") and e.problem_mark:
+        mark = e.problem_mark
+        msg += f" (line {mark.line + 1}, column {mark.column + 1})"
+    return msg
 
 class Processor:
     """
@@ -40,15 +50,25 @@ class Processor:
                 process = yaml.safe_load(file)
         except FileNotFoundError:
             raise FileNotFoundError(f"Process file not found: {process_file_path}")
+        except yaml.YAMLError as e:
+            raise ValueError(_format_yaml_error(e, process_file_path)) from e
         except IOError as e:
-            raise IOError(f"Error reading Process file {process_file_path}: {e}")
-            
+            raise IOError(f"Error reading Process file {process_file_path}: {e}") from e
+
+        if process is None:
+            raise ValueError(f"Process file {process_file_path} is empty or parses to null")
+
         raw_env = process.get("environment")
         self.environment = raw_env if isinstance(raw_env, dict) else {}
         self.context = process.get("context", [])
         self.requires = process.get("requires", [])
         self.templates = process.get("templates", [])
+
         logger.info(f"Process Loaded for {len(self.templates)} templates")
+        logger.debug(
+            f"Process config: {len(self.environment)} env vars, {len(self.context)} context directives, "
+            f"{len(self.requires)} requirements, templates={[t.get('path') for t in self.templates]}"
+        )
 
     def load_specifications(self):
         """Recursively load YAML files from the specifications folder."""
@@ -57,8 +77,14 @@ class Processor:
             for file in files:
                 if file.endswith(".yaml"):
                     file_path = os.path.join(root, file)
-                    with open(file_path, "r") as f:
-                        data = yaml.safe_load(f)
+                    try:
+                        with open(file_path, "r") as f:
+                            data = yaml.safe_load(f)
+                    except yaml.YAMLError as e:
+                        raise ValueError(_format_yaml_error(e, file_path)) from e
+                    except IOError as e:
+                        raise IOError(f"Error reading specification file {file_path}: {e}") from e
+
                     files_read += 1
                     relative_path = os.path.relpath(file_path, self.specifications_folder)
                     keys = relative_path.replace(".yaml", "").split(os.sep)
@@ -66,7 +92,10 @@ class Processor:
                     for key in keys[:-1]:
                         temp = temp.setdefault(key, {})
                     temp[keys[-1]] = data
+
+        spec_keys = list(self.context_data["specifications"].keys())
         logger.info(f"Specifications Loaded from {files_read} documents")
+        logger.debug(f"Specification top-level keys: {spec_keys}")
 
     def read_environment(self):
         """
@@ -76,63 +105,107 @@ class Processor:
         for var_name in self.environment.keys():
             value = os.getenv(var_name)
             if value is None:
-                raise KeyError(f"Environment variable '{var_name}' is not set.")
+                raise KeyError(
+                    f"Environment variable '{var_name}' is not set. "
+                    f"Required by process.yaml environment section. Set with -e {var_name}=<value>"
+                )
             self.environment[var_name] = value
 
-        logger.info(f"{len(self.environment)} Environment Variables loaded successfully.")        
-        
+        logger.info(f"{len(self.environment)} Environment Variables loaded successfully.")
+        logger.debug(f"Environment: {dict(self.environment)}")
+
     def add_context(self):
         """Add context elements to the context_data based on standardized directives."""
-        # context data is template processed with environment values
         for context_item in self.context:
             key = context_item["key"]
             directive_type = context_item["type"]
-            path = Template(context_item["path"]).render(self.environment)
+            try:
+                path = Template(context_item["path"]).render(self.environment)
+            except (UndefinedError, TemplateSyntaxError) as e:
+                raise ValueError(
+                    f"Context directive '{key}': failed to render path '{context_item['path']}': {e}"
+                ) from e
 
-            if directive_type == "path":
-                # Simple property path resolution
-                value = self.resolve_path(path)
-            
-            elif directive_type == "selector":
-                # List selector resolution
-                filter_property = Template(context_item["filter"]["property"]).render(self.environment)
-                filter_value =    Template(context_item["filter"]["value"]).render(self.environment)
-                value = self.resolve_selector(path, filter_property, filter_value)
-            
-            else:
-                raise ValueError(f"Unknown context directive type: {directive_type}")
+            try:
+                if directive_type == "path":
+                    value = self.resolve_path(path)
+                elif directive_type == "selector":
+                    filter_property = Template(context_item["filter"]["property"]).render(
+                        self.environment
+                    )
+                    filter_value = Template(context_item["filter"]["value"]).render(
+                        self.environment
+                    )
+                    value = self.resolve_selector(path, filter_property, filter_value)
+                else:
+                    raise ValueError(f"Unknown context directive type: {directive_type}")
 
-            self.context_data[key] = value
+                self.context_data[key] = value
+                logger.debug(f"Context '{key}' resolved: {directive_type} -> {path}")
+            except (KeyError, ValueError) as e:
+                raise ValueError(
+                    f"Context directive '{key}' failed (path={path}, type={directive_type}): {e}"
+                ) from e
+
         logger.info(f"{len(self.context)} Data Contexts Established")
         
     def resolve_path(self, path):
         """Resolve a simple property path."""
         keys = path.split(".")
         value = self.context_data
+        breadcrumb = []
         for key in keys:
+            breadcrumb.append(key)
+            if key not in value:
+                available = list(value.keys()) if isinstance(value, dict) else f"<{type(value).__name__}>"
+                raise KeyError(
+                    f"Path '{path}' failed at '{'.'.join(breadcrumb)}': key '{key}' not found. "
+                    f"Available at this level: {available}"
+                )
             value = value[key]
         return value
 
     def resolve_selector(self, list_path, property_name, property_value):
         """Resolve a list item based on filter criteria."""
         items = self.resolve_path(list_path)
-        if isinstance(items, list):
-            for item in items:
-                if item.get(property_name) == property_value:
-                    return item
-            raise KeyError(f"Item with {property_name} = {property_value} not found in {list_path}")
-        raise ValueError(f"Path does not resolve to a list: {list_path}")
+        if not isinstance(items, list):
+            raise ValueError(
+                f"Path '{list_path}' must resolve to a list, got {type(items).__name__}"
+            )
+        for item in items:
+            if item.get(property_name) == property_value:
+                return item
+        available_values = [
+            repr(item.get(property_name, "<missing>")) for item in items[:5]
+        ]
+        if len(items) > 5:
+            available_values.append("...")
+        raise KeyError(
+            f"No item with {property_name}={property_value!r} in {list_path}. "
+            f"Available {property_name} values: {', '.join(available_values)}"
+        )
 
     def verify_exists(self):
         """Ensure all required properties exist in the context data."""
         for prop in self.requires:
             keys = prop.split(".")
             value = self.context_data
+            breadcrumb = []
             for key in keys:
+                breadcrumb.append(key)
                 if key not in value:
-                    raise KeyError(f"Required property {prop} is missing.")
+                    available = (
+                        list(value.keys())
+                        if isinstance(value, dict)
+                        else f"<{type(value).__name__}>"
+                    )
+                    raise KeyError(
+                        f"Required property '{prop}' is missing at '{'.'.join(breadcrumb)}'. "
+                        f"Available at this level: {available}"
+                    )
                 value = value[key]
         logger.info(f"Verified {len(self.requires)} required properties exist, go for processing")
+        logger.debug(f"Required properties verified: {self.requires}")
 
     def process_templates(self):
         """Process templates according to the process.yaml configuration."""
@@ -162,7 +235,12 @@ class Processor:
             
             if "merge" in template_config and template_config["merge"]:
                 logger.debug(f"Merging {template_path}")
-                output = template.render(self.context_data)
+                try:
+                    output = template.render(self.context_data)
+                except (UndefinedError, TemplateSyntaxError) as e:
+                    raise ValueError(
+                        f"Template {template_config['path']}: render failed - {e}"
+                    ) from e
                 if "output" in template_config:
                     # Write to output path and delete the template file
                     output_context = {**self.context_data, **self.environment}
@@ -197,8 +275,14 @@ class Processor:
 
                     # Establish item context and render template
                     context = {**self.context_data, "item": item}
-                    output = template.render(context)
-                    
+                    try:
+                        output = template.render(context)
+                    except (UndefinedError, TemplateSyntaxError) as e:
+                        raise ValueError(
+                            f"Template {template_config['path']} (item={item.get('name', item)}): "
+                            f"render failed - {e}"
+                        ) from e
+
                     with open(output_path, "w") as file:
                         file.write(output)
                     files_written += 1
@@ -225,8 +309,14 @@ class Processor:
 
                     # Establish item context and render template
                     context = {**self.context_data, "item": item}
-                    output = template.render(context)
-                    
+                    try:
+                        output = template.render(context)
+                    except (UndefinedError, TemplateSyntaxError) as e:
+                        raise ValueError(
+                            f"Template {template_config['path']} (item={item.get('name', item)}): "
+                            f"render failed - {e}"
+                        ) from e
+
                     with open(output_path, "w") as file:
                         file.write(output)
                     files_written += 1
@@ -240,10 +330,14 @@ class Processor:
 def main():
     specifications_folder = os.getenv("SPECIFICATIONS_FOLDER", "/specifications")
     repo_folder = os.getenv("REPO_FOLDER", "/repo")
-    logging_level = os.getenv("LOG_LEVEL", "INFO")
-    logging.basicConfig(level=logging_level)
-    logger.info(f"Initialized, Specifications Folder: {specifications_folder}, Repo Folder: {repo_folder}, Logging Level {logging_level}")
-    
+    logging_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_format = "%(levelname)s: %(message)s"
+    logging.basicConfig(level=logging_level, format=log_format, stream=sys.stderr)
+    logger.info(
+        f"Initialized, Specifications Folder: {specifications_folder}, Repo Folder: {repo_folder}, "
+        f"Logging Level: {logging_level}"
+    )
+
     try:
         processor = Processor(specifications_folder, repo_folder)
         processor.read_environment()
@@ -251,7 +345,9 @@ def main():
         processor.verify_exists()
         processor.process_templates()
     except Exception as e:
-        logger.error(f"Error Reported {str(e)}")
+        logger.exception(str(e))
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
