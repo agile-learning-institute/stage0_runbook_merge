@@ -83,6 +83,56 @@ templates:
             self.assertEqual(processor.environment, {})
             processor.read_environment()
 
+    def test_load_process_invalid_yaml(self):
+        """Test that invalid YAML in process.yaml raises helpful error with file path."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir) / ".stage0_template"
+            template_dir.mkdir()
+            process_file = template_dir / "process.yaml"
+            process_file.write_text("templates:\n  - path: bad\n  invalid: yaml: [")
+            specs_dir = Path(tmpdir) / "specs"
+            specs_dir.mkdir()
+            (specs_dir / "dummy.yaml").write_text("{}")
+
+            with self.assertRaises(ValueError) as ctx:
+                Processor(str(specs_dir), tmpdir)
+            self.assertIn("process.yaml", str(ctx.exception))
+            self.assertIn("YAML", str(ctx.exception))
+
+    def test_resolve_path_missing_key_has_helpful_error(self):
+        """Test that resolve_path raises KeyError with available keys when key not found."""
+        self.processor.context_data = {
+            "specifications": {"arch": {"product": "x"}},
+            "top": {"level1": {"level2": "value"}},
+        }
+        with self.assertRaises(KeyError) as ctx:
+            self.processor.resolve_path("top.level1.nonexistent")
+        self.assertIn("nonexistent", str(ctx.exception))
+        self.assertIn("level2", str(ctx.exception))
+
+    def test_resolve_selector_no_match_has_helpful_error(self):
+        """Test that resolve_selector raises KeyError with available values when no match."""
+        self.processor.context_data = {
+            "domains": [
+                {"name": "user", "id": 1},
+                {"name": "admin", "id": 2},
+            ]
+        }
+        with self.assertRaises(KeyError) as ctx:
+            self.processor.resolve_selector("domains", "name", "nonexistent")
+        self.assertIn("nonexistent", str(ctx.exception))
+        self.assertIn("user", str(ctx.exception))
+        self.assertIn("admin", str(ctx.exception))
+
+    def test_verify_exists_missing_property_has_helpful_error(self):
+        """Test that verify_exists raises KeyError with available keys when required missing."""
+        self.processor.context_data = {"a": {"b": {"c": 1}}}
+        self.processor.requires = ["a.b.nonexistent"]
+        with self.assertRaises(KeyError) as ctx:
+            self.processor.verify_exists()
+        self.assertIn("nonexistent", str(ctx.exception))
+        self.assertIn("c", str(ctx.exception))
+
     def test_add_context_with_resolved_directive(self):
         """Test that context is added correctly and resolves directives."""
         self.processor.read_environment()

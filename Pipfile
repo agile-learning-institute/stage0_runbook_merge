@@ -9,12 +9,11 @@ clean = "sh -c 'rm -rf ~/tmp/testRepo'"
 setup = "sh -c 'pipenv run clean && mkdir -p ~/tmp/testRepo && cd ./test/repo && cp -r . ~/tmp/testRepo'"
 local = "sh -c 'pipenv run setup && SPECIFICATIONS_FOLDER=./test/repo/.stage0_template/test_data REPO_FOLDER=~/tmp/testRepo SERVICE_NAME=user DATA_SOURCE=organization PYTHONPATH=./src python -m main'"
 build = "docker build --tag ghcr.io/agile-learning-institute/stage0_runbook_merge:latest ."
-merge = "sh -c 'pipenv run build &&pipenv run setup && cd ./test/repo && ./.stage0_template/test'"
+merge = "sh -c 'pipenv run build && pipenv run setup && cd ./test/repo && ./.stage0_template/test'"
 
 [packages]
 pyyaml = "*"
 jinja2 = "*"
-requests = "*"
 
 [dev-packages]
 
