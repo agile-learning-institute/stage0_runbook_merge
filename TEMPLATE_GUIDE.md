@@ -348,6 +348,7 @@ templates:
 - Ensure template files exist in the repository
 
 ### Debugging Tips
+- Use `LOG_LEVEL=DEBUG` when running the container (e.g. `-e LOG_LEVEL=DEBUG`) to see process config, context resolution, and template operations
 - Use the `to_yaml` filter to inspect data in templates
 - Add debug output to templates temporarily
 - Check the processing logs for error messages

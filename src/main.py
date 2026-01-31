@@ -1,16 +1,17 @@
+import json
+import logging
+import os
 import shutil
 import sys
-from jinja2 import Template, Environment, UndefinedError, TemplateSyntaxError
-import os
-import yaml
-import json
-import traceback
+from typing import Any, Dict, List
 
-import logging
+import yaml
+from jinja2 import Environment, Template, TemplateSyntaxError, UndefinedError
+
 logger = logging.getLogger(__name__)
 
 
-def _format_yaml_error(e, file_path):
+def _format_yaml_error(e: Exception, file_path: str) -> str:
     """Format YAML parsing errors with file path and line/column when available."""
     msg = f"YAML parsing error in {file_path}: {e}"
     if hasattr(e, "problem_mark") and e.problem_mark:
@@ -20,29 +21,29 @@ def _format_yaml_error(e, file_path):
 
 class Processor:
     """
-    Processor class for handling specification and template processing 
+    Processor class for handling specification and template processing
     based on process.yaml configuration.
     """
 
-    def __init__(self, specifications_folder, repo_folder):
+    def __init__(self, specifications_folder: str, repo_folder: str) -> None:
         self.specifications_folder = specifications_folder
         self.repo_folder = repo_folder
-        self.specifications = {}
-        self.environment = {}
-        self.context = []
-        self.requires = []
-        self.templates = []
-        self.context_data = {"specifications": {}}
+        self.specifications: Dict[str, Any] = {}
+        self.environment: Dict[str, str] = {}
+        self.context: List[Dict[str, Any]] = []
+        self.requires: List[str] = []
+        self.templates: List[Dict[str, Any]] = []
+        self.context_data: Dict[str, Any] = {"specifications": {}}
         self.load_process()
         self.load_specifications()
 
-    def remove_process_file(self):
+    def remove_process_file(self) -> None:
         """Recursively remove the .stage0_template directory."""
         process_file_path = os.path.join(self.repo_folder, ".stage0_template")
         logger.info(f"Removing {process_file_path}")
         shutil.rmtree(process_file_path)
-        
-    def load_process(self):
+
+    def load_process(self) -> None:
         """Load the process.yaml file from the repository folder."""
         process_file_path = os.path.join(self.repo_folder, ".stage0_template/process.yaml")
         try:
@@ -70,7 +71,7 @@ class Processor:
             f"{len(self.requires)} requirements, templates={[t.get('path') for t in self.templates]}"
         )
 
-    def load_specifications(self):
+    def load_specifications(self) -> None:
         """Recursively load YAML files from the specifications folder."""
         files_read = 0
         for root, _, files in os.walk(self.specifications_folder):
@@ -97,7 +98,7 @@ class Processor:
         logger.info(f"Specifications Loaded from {files_read} documents")
         logger.debug(f"Specification top-level keys: {spec_keys}")
 
-    def read_environment(self):
+    def read_environment(self) -> None:
         """
         Load environment variables as specified in the process.yaml.
         Raise an exception if a required variable is missing.
@@ -114,7 +115,7 @@ class Processor:
         logger.info(f"{len(self.environment)} Environment Variables loaded successfully.")
         logger.debug(f"Environment: {dict(self.environment)}")
 
-    def add_context(self):
+    def add_context(self) -> None:
         """Add context elements to the context_data based on standardized directives."""
         for context_item in self.context:
             key = context_item["key"]
@@ -148,8 +149,8 @@ class Processor:
                 ) from e
 
         logger.info(f"{len(self.context)} Data Contexts Established")
-        
-    def resolve_path(self, path):
+
+    def resolve_path(self, path: str) -> Any:
         """Resolve a simple property path."""
         keys = path.split(".")
         value = self.context_data
@@ -165,7 +166,9 @@ class Processor:
             value = value[key]
         return value
 
-    def resolve_selector(self, list_path, property_name, property_value):
+    def resolve_selector(
+        self, list_path: str, property_name: str, property_value: Any
+    ) -> Any:
         """Resolve a list item based on filter criteria."""
         items = self.resolve_path(list_path)
         if not isinstance(items, list):
@@ -185,7 +188,7 @@ class Processor:
             f"Available {property_name} values: {', '.join(available_values)}"
         )
 
-    def verify_exists(self):
+    def verify_exists(self) -> None:
         """Ensure all required properties exist in the context data."""
         for prop in self.requires:
             keys = prop.split(".")
@@ -207,7 +210,7 @@ class Processor:
         logger.info(f"Verified {len(self.requires)} required properties exist, go for processing")
         logger.debug(f"Required properties verified: {self.requires}")
 
-    def process_templates(self):
+    def process_templates(self) -> None:
         """Process templates according to the process.yaml configuration."""
         files_written = 0
         for template_config in self.templates:
@@ -327,7 +330,8 @@ class Processor:
         self.remove_process_file()
         logger.info(f"Completed - Processed {len(self.templates)} templates, wrote {files_written} files")
 
-def main():
+
+def main() -> None:
     specifications_folder = os.getenv("SPECIFICATIONS_FOLDER", "/specifications")
     repo_folder = os.getenv("REPO_FOLDER", "/repo")
     logging_level = os.getenv("LOG_LEVEL", "INFO").upper()
