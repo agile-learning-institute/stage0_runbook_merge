@@ -1,7 +1,9 @@
 #################
 # NOTE: Uses the test/specifications and test/repo folders
 
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch, mock_open
 import os
 from main import Processor
@@ -34,6 +36,7 @@ class TestProcessor(unittest.TestCase):
         self.assertEqual(len(self.processor.requires), 8)
         self.assertEqual(len(self.processor.templates), 5)  # Updated to include the new json-test.j2 template
 
+
     def test_load_specifications(self):
         """Test that specifications are loaded correctly."""
         self.assertIn("architecture", self.processor.context_data["specifications"])
@@ -49,6 +52,36 @@ class TestProcessor(unittest.TestCase):
         self.processor.read_environment()
         self.assertEqual("user", self.processor.environment["SERVICE_NAME"])
         self.assertEqual("organization", self.processor.environment["DATA_SOURCE"])
+
+    def test_empty_environment_does_not_fail(self):
+        """Test that empty or null environment property does not cause failure."""
+        self.processor.environment = {}
+        self.processor.read_environment()
+        self.assertEqual(self.processor.environment, {})
+
+    def test_load_process_with_empty_environment_yaml(self):
+        """Test that process.yaml with empty environment: key does not fail."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_dir = Path(tmpdir) / ".stage0_template"
+            template_dir.mkdir()
+            process_file = template_dir / "process.yaml"
+            process_file.write_text("""environment:
+
+context: []
+requires: []
+templates:
+  - path: ./simple.md
+    merge: true
+""")
+            simple_md = Path(tmpdir) / "simple.md"
+            simple_md.write_text("hello")
+            specs_dir = Path(tmpdir) / "specs"
+            specs_dir.mkdir()
+            (specs_dir / "dummy.yaml").write_text("{}")
+
+            processor = Processor(str(specs_dir), tmpdir)
+            self.assertEqual(processor.environment, {})
+            processor.read_environment()
 
     def test_add_context_with_resolved_directive(self):
         """Test that context is added correctly and resolves directives."""

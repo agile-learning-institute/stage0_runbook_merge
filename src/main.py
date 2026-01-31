@@ -43,7 +43,8 @@ class Processor:
         except IOError as e:
             raise IOError(f"Error reading Process file {process_file_path}: {e}")
             
-        self.environment = process.get("environment", [])
+        raw_env = process.get("environment")
+        self.environment = raw_env if isinstance(raw_env, dict) else {}
         self.context = process.get("context", [])
         self.requires = process.get("requires", [])
         self.templates = process.get("templates", [])
