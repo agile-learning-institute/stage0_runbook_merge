@@ -25,6 +25,7 @@ pipenv run merge
 
 - **[Template Creation Guide](TEMPLATE_GUIDE.md)** - Complete guide for creating templates
 - **[Contributing Guide](CONTRIBUTING.md)** - Guide for developers contributing to the utility
+- **[Makefile](./Makefile)** - Sample makefile for us by template repo's
 
 ## Overview
 
