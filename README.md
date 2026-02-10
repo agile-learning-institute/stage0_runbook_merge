@@ -12,7 +12,7 @@ A utility for processing code templates by merging them with data from specifica
 ### Basic Usage
 ```bash
 # Install dependencies
-pipenv install
+pipenv install --dev
 
 # Run unit tests
 pipenv run test
