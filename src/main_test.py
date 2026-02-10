@@ -290,6 +290,62 @@ templates:
         self.assertEqual(iterable[0]["name"], "service1")
         self.assertEqual(iterable[1]["name"], "service2")
 
+    def test_mergeFor_string_list_integration(self):
+        """Test that mergeFor supports lists of strings for output paths and template rendering."""
+        from jinja2 import Template
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Set up a minimal .stage0_template/process.yaml using mergeFor over a list of strings
+            template_dir = Path(tmpdir) / ".stage0_template"
+            template_dir.mkdir()
+            process_file = template_dir / "process.yaml"
+            process_file.write_text(
+                yaml.dump(
+                    {
+                        "environment": {},
+                        "context": [],
+                        "requires": [],
+                        "templates": [
+                            {
+                                "path": "./routes.template",
+                                "mergeFor": {
+                                    "items": "controls",
+                                    "output": "./{{ item | lower }}_routes.py",
+                                },
+                            }
+                        ],
+                    }
+                )
+            )
+
+            # Create a simple template that uses the item string directly
+            template_path = Path(tmpdir) / "routes.template"
+            template_path.write_text("route for {{ item }}")
+
+            # Create a dummy specifications folder (required by Processor)
+            specs_dir = Path(tmpdir) / "specs"
+            specs_dir.mkdir()
+            (specs_dir / "dummy.yaml").write_text("{}")
+
+            # Instantiate a Processor and inject a list of strings into context_data
+            processor = Processor(str(specs_dir), tmpdir)
+            processor.context_data = {"controls": ["Create", "Control"]}
+
+            # This would fail before the fix because Template.render was called with a bare string
+            processor.process_templates()
+
+            # Verify that the expected files were created with the correct content
+            create_path = Path(tmpdir) / "create_routes.py"
+            control_path = Path(tmpdir) / "control_routes.py"
+            self.assertTrue(create_path.exists())
+            self.assertTrue(control_path.exists())
+            self.assertEqual(create_path.read_text(), "route for Create")
+            self.assertEqual(control_path.read_text(), "route for Control")
+
+            # The original template should have been removed
+            self.assertFalse(template_path.exists())
+
     def test_combined_filters(self):
         """Test that to_yaml and indent filters work together."""
         from jinja2 import Environment

@@ -268,16 +268,29 @@ class Processor:
                     # For dictionaries, create name/content pairs
                     iterable = [{"name": k, "content": v} for k, v in items.items()]
                 else:
-                    # For lists, use as-is
+                    # For lists (including lists of strings), use as-is
                     iterable = items
                 for item in iterable:
-                    # Render the output file name using the item context
-                    output_file_name = Template(template_config["mergeFor"]["output"]).render(item)
+                    # Build the context for rendering the output file name.
+                    # - For dict items, expose keys as top-level variables (backwards compatible)
+                    # - Always expose the full item as `item` so string lists can use {{ item }}.
+                    if isinstance(item, dict):
+                        output_context = {**item}
+                        output_context.setdefault("item", item)
+                    else:
+                        output_context = {"item": item}
+
+                    # Render the output file name using the item-aware context
+                    output_file_name = Template(template_config["mergeFor"]["output"]).render(**output_context)
                     output_path = os.path.normpath(os.path.join(self.repo_folder, output_file_name))
                     logger.info(f"Building {output_file_name}")
 
                     # Establish item context and render template
-                    context = {**self.context_data, "item": item}
+                    # Expose `item` plus any dict keys when item is a mapping
+                    if isinstance(item, dict):
+                        context = {**self.context_data, **item, "item": item}
+                    else:
+                        context = {**self.context_data, "item": item}
                     try:
                         output = template.render(context)
                     except (UndefinedError, TemplateSyntaxError) as e:
