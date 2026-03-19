@@ -22,9 +22,10 @@ test:
 		-v "$$(pwd)/.stage0_template/specifications:/specifications" \
 		-e LOG_LEVEL="$$LOG_LEVEL" \
 		ghcr.io/agile-learning-institute/stage0_runbook_merge:latest
-	@echo "Checking output..."; \
-	diff -qr "$$(pwd)/.stage0_template/test_expected/" "$$HOME/tmp/testRepo/" || true
-	@echo "Done."
+	@echo "Checking output (ignoring .git, .DS_Store, node_modules, dist)..."; \
+	(diff -qr "$$(pwd)/.stage0_template/test_expected/" "$$HOME/tmp/testRepo/" 2>/dev/null || true) | (grep -v '\.git' | grep -v '\.DS_Store' | grep -v 'node_modules' | grep -v 'dist' | grep -v 'playwright-report' | grep -v 'test-results' || true) > /tmp/stage0_diff.txt; \
+	if [ -s /tmp/stage0_diff.txt ]; then cat /tmp/stage0_diff.txt; echo "Fail: unexpected differences."; exit 1; fi; \
+	echo "Done."
 
 clean:
 	@echo "Removing temporary test repo at $$HOME/tmp/testRepo..."; \
